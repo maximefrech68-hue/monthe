@@ -1,0 +1,24 @@
+{
+  "name": "monthe",
+  "version": "1.0.0",
+  "description": "",
+  "main": "checkout.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maximefrech68-hue/monthe.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/maximefrech68-hue/monthe/issues"
+  },
+  "homepage": "https://github.com/maximefrech68-hue/monthe#readme",
+  "dependencies": {
+    "stripe": "^20.1.0"
+  }
+}
