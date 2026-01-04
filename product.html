@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Produit – MonThé</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>
+        <a href="index.html" style="color: white; text-decoration: none"
+          >MonThé</a
+        >
+      </h1>
+      <p>Thés artisanaux & infusions naturelles</p>
+      <div class="topbar">
+        <a href="index.html" class="cart-btn">← Retour boutique</a>
+        <button id="openCart" class="cart-btn">
+          Panier (<span id="cartCount">0</span>)
+        </button>
+      </div>
+    </header>
+
+    <main style="padding: 2rem">
+      <div id="product" class="product-page">Chargement du produit...</div>
+    </main>
+
+    <!-- Modal panier (même que index) -->
+    <div id="cartModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Votre panier</h2>
+          <button id="closeCart" class="close-btn">✕</button>
+        </div>
+
+        <div id="cartItems"></div>
+
+        <div class="cart-footer">
+          <div>
+            Total : <strong><span id="cartTotal">0.00</span> €</strong>
+          </div>
+          <button id="checkoutBtn" class="primary-btn">Passer commande</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="products.js"></script>
+    <script src="product.js"></script>
+  </body>
+</html>

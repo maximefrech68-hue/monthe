@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MonThé – Thés artisanaux</title>
+    <div class="topbar">
+      <button id="openCart" class="cart-btn">
+        Panier (<span id="cartCount">0</span>)
+      </button>
+    </div>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>MonThé</h1>
+      <p>Thés artisanaux & infusions naturelles</p>
+    </header>
+
+    <main>
+      <section class="toolbar">
+        <input id="search" type="text" placeholder="Rechercher un thé..." />
+
+        <select id="category">
+          <option value="all">Toutes catégories</option>
+          <option value="noir">Thé noir</option>
+          <option value="vert">Thé vert</option>
+          <option value="oolong">Oolong</option>
+          <option value="infusion">Infusion</option>
+        </select>
+
+        <select id="sort">
+          <option value="default">Trier</option>
+          <option value="price-asc">Prix ↑</option>
+          <option value="price-desc">Prix ↓</option>
+          <option value="name-asc">Nom A→Z</option>
+        </select>
+      </section>
+
+      <section id="products" class="products">
+        <!-- Produits injectés ici -->
+      </section>
+    </main>
+
+    <div id="cartModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Votre panier</h2>
+          <button id="closeCart" class="close-btn">✕</button>
+        </div>
+
+        <div id="cartItems"></div>
+
+        <div class="cart-footer">
+          <div>
+            Total : <strong><span id="cartTotal">0.00</span> €</strong>
+          </div>
+          <button id="checkoutBtn" class="primary-btn">Passer commande</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="products.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
