@@ -3,14 +3,30 @@ const SHEET_CSV_URL =
 
 function cleanCell(s) {
   return (s ?? "")
-    .replace(/^\uFEFF/, "") // enlève BOM si présent
+    .replace(/^\uFEFF/, "")
     .trim()
-    .replace(/^"|"$/g, ""); // enlève guillemets autour
+    .replace(/^"|"$/g, "");
 }
 
 function splitLine(line, sep) {
-  // version simple (ok si tu évites les virgules/; dans les textes)
   return line.split(sep).map(cleanCell);
+}
+
+function toBoolActive(value) {
+  // Tout ce qui ressemble à "false" => false. Sinon true par défaut.
+  const v = String(value ?? "")
+    .trim()
+    .toUpperCase();
+
+  const falsy = new Set(["FALSE", "FAUX", "0", "NO", "NON", "N"]);
+  const truthy = new Set(["TRUE", "VRAI", "1", "YES", "OUI", "Y"]);
+
+  if (v === "") return true; // vide => visible
+  if (falsy.has(v)) return false;
+  if (truthy.has(v)) return true;
+
+  // si l'utilisateur écrit autre chose (ex: "draft"), on considère visible
+  return true;
 }
 
 async function fetchProductsFromSheet() {
@@ -24,7 +40,6 @@ async function fetchProductsFromSheet() {
     .map((l) => l.replace(/\r/g, ""))
     .filter(Boolean);
 
-  // détecte si séparateur = "," ou ";"
   const first = lines[0];
   const sep = first.includes(";") && !first.includes(",") ? ";" : ",";
 
@@ -38,23 +53,31 @@ async function fetchProductsFromSheet() {
       product[h] = values[i] ?? "";
     });
 
-    // conversions utiles
     product.price_eur = Number(product.price_eur || 0);
     product.stock = product.stock === "" ? null : Number(product.stock);
 
-    // ✅ active: TRUE/FALSE (par défaut TRUE si vide)
-    // Google Sheets renvoie souvent "TRUE"/"FALSE" en texte
-    const a = String(product.active ?? "")
-      .trim()
-      .toUpperCase();
-    product.active = a === "" ? true : a !== "FALSE";
+    // active
+    product.active = toBoolActive(product.active);
 
     return product;
   });
 
   console.log("Headers détectés :", headers);
-  console.log("Produit #1 :", products[0]);
+  console.log(
+    "Exemples active :",
+    products.map((p) => ({
+      id: p.id,
+      activeRaw: p.active,
+      activeCell: p.active,
+    }))
+  );
 
-  // ✅ on ne garde que les produits actifs
-  return products.filter((p) => p.active === true);
+  const visible = products.filter((p) => p.active === true);
+
+  console.log(
+    "Produits visibles :",
+    visible.map((p) => p.id)
+  );
+
+  return visible;
 }
