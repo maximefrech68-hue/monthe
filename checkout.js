@@ -215,7 +215,7 @@ async function payWithStripe() {
   window.location.href = data.url;
 }
 
-/* -------------------- FORM SUBMIT (REAL PAYMENT) -------------------- */
+/* -------------------- FORM SUBMIT (REAL PAYMENT) ------------------- */
 form?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
