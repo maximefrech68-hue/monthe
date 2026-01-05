@@ -2,6 +2,8 @@ let allProducts = [];
 let cart = loadCart();
 
 const SITE_URL = "https://zippy-hamster-4154f1.netlify.app";
+const GOOGLE_APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbzDJg_qstHTSrSg6HJi6-UdaJ5XkXX5PXde7Bw5JWqXso2lgYsWP2BoIjr73oe140Fd/exec";
 
 const summaryEl = document.querySelector("#summary");
 const totalEl = document.querySelector("#total");
@@ -218,16 +220,59 @@ async function payWithStripe() {
 form?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  // Vérifie les champs required / email etc.
-  if (!form.checkValidity()) {
-    form.reportValidity();
+  if (Object.keys(cart).length === 0) {
+    alert("Votre panier est vide.");
     return;
   }
 
+  const ref = "MT-" + Math.random().toString(16).slice(2, 8).toUpperCase();
+
+  // prépare items détaillés
+  const items = Object.entries(cart).map(([id, qty]) => {
+    const p = getProductById(id);
+    return {
+      id,
+      name: p?.name || id,
+      qty,
+      price_eur: Number(p?.price_eur || 0),
+      line_total_eur: Number(p?.price_eur || 0) * qty,
+    };
+  });
+
+  const payload = {
+    order_ref: ref,
+    full_name: document.querySelector("#fullName").value.trim(),
+    email: document.querySelector("#email").value.trim(),
+    address: document.querySelector("#address").value.trim(),
+    city: document.querySelector("#city").value.trim(),
+    zip: document.querySelector("#zip").value.trim(),
+    items,
+    total_eur: computeTotal(),
+  };
+
   try {
-    await payWithStripe();
+    const res = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // important pour Apps Script
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Erreur inconnue");
+
+    // OK => affiche confirmation + vide panier
+    orderRefEl.textContent = data.order_ref || ref;
+
+    cart = {};
+    saveCart();
+    updateCartBadge();
+    renderSummary();
+
+    form.closest(".checkout-card").classList.add("hidden");
+    confirmation.classList.remove("hidden");
   } catch (err) {
-    alert("Paiement impossible : " + err.message);
+    alert("Erreur envoi commande : " + err.message);
+    console.error(err);
   }
 });
 
