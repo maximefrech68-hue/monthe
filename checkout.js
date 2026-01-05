@@ -195,8 +195,8 @@ function buildOrderPayload() {
 
   return {
     order_ref: ref,
-    full_name: document.querySelector("#fullName")?.value.trim() || "",
     email: document.querySelector("#email")?.value.trim() || "",
+    full_name: document.querySelector("#fullName")?.value.trim() || "",
     address: document.querySelector("#address")?.value.trim() || "",
     city: document.querySelector("#city")?.value.trim() || "",
     zip: document.querySelector("#zip")?.value.trim() || "",
@@ -299,8 +299,8 @@ form?.addEventListener("submit", async (e) => {
 
   // minimum de validation
   if (
-    !payload.full_name ||
     !payload.email ||
+    !payload.full_name ||
     !payload.address ||
     !payload.city ||
     !payload.zip
