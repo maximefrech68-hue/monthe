@@ -4,6 +4,9 @@ let cart = loadCart();
 const GOOGLE_APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbzDJg_qstHTSrSg6HJi6-UdaJ5XkXX5PXde7Bw5JWqXso2lgYsWP2BoIjr73oe140Fd/exec";
 
+// IMPORTANT : ton domaine Netlify (prod)
+const SITE_URL = "https://zippy-hamster-4154f1.netlify.app";
+
 const summaryEl = document.querySelector("#summary");
 const totalEl = document.querySelector("#total");
 const cartCountEl = document.querySelector("#cartCount");
@@ -52,6 +55,8 @@ function computeTotal() {
 
 /* -------------------- RENDER SUMMARY -------------------- */
 function renderSummary() {
+  if (!summaryEl || !totalEl) return;
+
   summaryEl.innerHTML = "";
   const entries = Object.entries(cart);
 
@@ -85,7 +90,8 @@ function renderSummary() {
 
 /* -------------------- MODAL CART -------------------- */
 function renderCartModal() {
-  if (!cartItemsEl) return;
+  if (!cartItemsEl || !cartTotalEl) return;
+
   cartItemsEl.innerHTML = "";
 
   const entries = Object.entries(cart);
@@ -100,7 +106,7 @@ function renderCartModal() {
     if (!p) continue;
 
     const img =
-      p.image_url || "https://via.placeholder.com/120x80?text=MonTh%C3%A9";
+      p.image_url || "https://via.placeholder.com/600x400?text=MonTh%C3%A9";
 
     const row = document.createElement("div");
     row.className = "cart-item";
@@ -139,6 +145,7 @@ function changeQty(id, delta) {
 cartItemsEl?.addEventListener("click", (e) => {
   const btn = e.target.closest("button");
   if (!btn) return;
+
   const action = btn.dataset.action;
   const id = btn.dataset.id;
   if (!id) return;
@@ -168,23 +175,75 @@ checkoutBtn?.addEventListener("click", () => {
   cartModal?.classList.add("hidden");
 });
 
+/* -------------------- HELPERS -------------------- */
+function buildOrderPayload() {
+  const ref = "MT-" + Math.random().toString(16).slice(2, 8).toUpperCase();
+
+  const items = Object.entries(cart)
+    .map(([id, qty]) => {
+      const p = getProductById(id);
+      if (!p) return null;
+      return {
+        id,
+        name: p.name,
+        qty,
+        price_eur: Number(p.price_eur || 0),
+        line_total_eur: Number(p.price_eur || 0) * qty,
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    order_ref: ref,
+    full_name: document.querySelector("#fullName")?.value.trim() || "",
+    email: document.querySelector("#email")?.value.trim() || "",
+    address: document.querySelector("#address")?.value.trim() || "",
+    city: document.querySelector("#city")?.value.trim() || "",
+    zip: document.querySelector("#zip")?.value.trim() || "",
+    items,
+    total_eur: computeTotal(),
+    payment_status: "pending", // on passe "paid" après succès
+    created_at: new Date().toISOString(),
+  };
+}
+
+function savePendingOrder(payload) {
+  localStorage.setItem("pending_order", JSON.stringify(payload));
+}
+function loadPendingOrder() {
+  try {
+    return JSON.parse(localStorage.getItem("pending_order") || "null");
+  } catch {
+    return null;
+  }
+}
+function clearPendingOrder() {
+  localStorage.removeItem("pending_order");
+}
+
+async function safeJson(res) {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { ok: false, error: "Réponse non-JSON", raw: text };
+  }
+}
+
 /* -------------------- STRIPE PAYMENT -------------------- */
 async function payWithStripe() {
-  // 1) panier vide ?
   if (Object.keys(cart).length === 0) {
     alert("Votre panier est vide.");
     return;
   }
 
-  // 2) construire items Stripe
   const items = Object.entries(cart)
     .map(([id, qty]) => {
       const p = getProductById(id);
       if (!p) return null;
-
       return {
         name: p.name,
-        unit_amount: Math.round(Number(p.price_eur || 0) * 100), // centimes
+        unit_amount: Math.round(Number(p.price_eur || 0) * 100),
         quantity: qty,
       };
     })
@@ -195,7 +254,6 @@ async function payWithStripe() {
     return;
   }
 
-  // 3) appeler function Netlify
   const res = await fetch("/.netlify/functions/create-checkout-session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -206,16 +264,28 @@ async function payWithStripe() {
     }),
   });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || "Erreur Stripe");
-  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Erreur Stripe");
 
-  // 4) redirection
   window.location.href = data.url;
 }
 
-/* -------------------- FORM SUBMIT (REAL PAYMENT) ------------------- */
+/* -------------------- SAVE ORDER TO APPS SCRIPT -------------------- */
+async function sendOrderToGoogleSheet(orderPayload) {
+  const res = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(orderPayload),
+  });
+
+  const data = await safeJson(res);
+  if (!data.ok) throw new Error(data.error || "Erreur Google Sheet");
+
+  return data;
+}
+
+/* -------------------- FORM SUBMIT (START PAYMENT) -------------------- */
 form?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -224,97 +294,88 @@ form?.addEventListener("submit", async (e) => {
     return;
   }
 
-  const ref = "MT-" + Math.random().toString(16).slice(2, 8).toUpperCase();
+  // 1) crée commande "pending" et stocke en local
+  const payload = buildOrderPayload();
 
-  // prépare items détaillés
-  const items = Object.entries(cart).map(([id, qty]) => {
-    const p = getProductById(id);
-    return {
-      id,
-      name: p?.name || id,
-      qty,
-      price_eur: Number(p?.price_eur || 0),
-      line_total_eur: Number(p?.price_eur || 0) * qty,
-    };
-  });
+  // minimum de validation
+  if (
+    !payload.full_name ||
+    !payload.email ||
+    !payload.address ||
+    !payload.city ||
+    !payload.zip
+  ) {
+    alert("Merci de remplir tous les champs.");
+    return;
+  }
 
-  const payload = {
-    order_ref: ref,
-    full_name: document.querySelector("#fullName").value.trim(),
-    email: document.querySelector("#email").value.trim(),
-    address: document.querySelector("#address").value.trim(),
-    city: document.querySelector("#city").value.trim(),
-    zip: document.querySelector("#zip").value.trim(),
-    items,
-    total_eur: computeTotal(),
-  };
+  savePendingOrder(payload);
 
+  // 2) lance Stripe
   try {
-    const res = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, // important pour Apps Script
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "Erreur inconnue");
-
-    // OK => affiche confirmation + vide panier
-    orderRefEl.textContent = data.order_ref || ref;
-
-    cart = {};
-    saveCart();
-    updateCartBadge();
-    renderSummary();
-
-    form.closest(".checkout-card").classList.add("hidden");
-    confirmation.classList.remove("hidden");
+    await payWithStripe();
   } catch (err) {
-    alert("Erreur envoi commande : " + err.message);
+    alert("Paiement impossible : " + err.message);
     console.error(err);
   }
 });
 
 /* -------------------- AFTER RETURN FROM STRIPE -------------------- */
-// si Stripe renvoie success=1, on peut afficher la confirmation ici
-function handleStripeReturn() {
+async function handleStripeReturn() {
   const params = new URLSearchParams(window.location.search);
   const success = params.get("success");
   const canceled = params.get("canceled");
 
-  if (success === "1") {
-    // "paiement réussi" (en vrai on devrait vérifier côté serveur,
-    // mais pour démarrer, on affiche juste un message)
-    const ref = "PAY-" + Math.random().toString(16).slice(2, 8).toUpperCase();
-    if (orderRefEl) orderRefEl.textContent = ref;
-
-    cart = {};
-    saveCart();
-    updateCartBadge();
-    renderSummary();
-
-    form?.closest(".checkout-card")?.classList.add("hidden");
-    confirmation?.classList.remove("hidden");
+  if (canceled === "1") {
+    alert("Paiement annulé. Votre panier est toujours là 🙂");
+    return;
   }
 
-  if (canceled === "1") {
-    // paiement annulé
-    // on ne vide pas le panier
-    // petit message simple :
-    alert("Paiement annulé. Votre panier est toujours là 🙂");
+  if (success === "1") {
+    // Stripe OK → on envoie la commande "paid" à Google Sheet
+    const pending = loadPendingOrder();
+    if (!pending) {
+      alert("Paiement OK, mais commande introuvable (pending_order manquant).");
+      return;
+    }
+
+    pending.payment_status = "paid";
+    pending.paid_at = new Date().toISOString();
+
+    try {
+      const data = await sendOrderToGoogleSheet(pending);
+
+      // affiche confirmation
+      orderRefEl.textContent = data.order_ref || pending.order_ref;
+
+      // vide panier + cleanup
+      cart = {};
+      saveCart();
+      updateCartBadge();
+      renderSummary();
+      clearPendingOrder();
+
+      form?.closest(".checkout-card")?.classList.add("hidden");
+      confirmation?.classList.remove("hidden");
+    } catch (err) {
+      alert(
+        "Paiement OK, mais erreur d'enregistrement commande : " + err.message
+      );
+      console.error(err);
+    }
   }
 }
 
 /* -------------------- INIT -------------------- */
 async function init() {
   try {
-    allProducts = await fetchProductsFromSheet(); // fourni par products.js
+    allProducts = await fetchProductsFromSheet(); // fournie par products.js
     cart = loadCart();
     updateCartBadge();
     renderSummary();
-    handleStripeReturn();
+    await handleStripeReturn();
   } catch (err) {
-    summaryEl.textContent = "Erreur de chargement (produits).";
+    if (summaryEl) summaryEl.textContent = "Erreur de chargement (produits).";
     console.error(err);
   }
 }
