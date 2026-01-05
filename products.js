@@ -1,45 +1,54 @@
+// products.js — MonThé (Google Sheet -> Produits)
 const SHEET_CSV_URL =
   "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=Products";
 
+/**
+ * Nettoie une cellule CSV
+ */
 function cleanCell(s) {
   return (s ?? "")
-    .replace(/^\uFEFF/, "")
+    .replace(/^\uFEFF/, "") // enlève BOM si présent
     .trim()
-    .replace(/^"|"$/g, "");
+    .replace(/^"|"$/g, ""); // enlève guillemets autour
 }
 
+/**
+ * Split simple (OK si tu évites les virgules/; dans les textes)
+ */
 function splitLine(line, sep) {
   return line.split(sep).map(cleanCell);
 }
 
-function toBoolActive(value) {
-  // Tout ce qui ressemble à "false" => false. Sinon true par défaut.
-  const v = String(value ?? "")
-    .trim()
-    .toUpperCase();
-
-  const falsy = new Set(["FALSE", "FAUX", "0", "NO", "NON", "N"]);
-  const truthy = new Set(["TRUE", "VRAI", "1", "YES", "OUI", "Y"]);
-
-  if (v === "") return true; // vide => visible
-  if (falsy.has(v)) return false;
-  if (truthy.has(v)) return true;
-
-  // si l'utilisateur écrit autre chose (ex: "draft"), on considère visible
-  return true;
+/**
+ * Convertit "TRUE"/"FALSE"/"1"/"0"/"VRAI"/"FAUX" en booléen.
+ * - Si vide => null (pour choisir un comportement par défaut)
+ */
+function toBoolOrNull(v) {
+  const s = cleanCell(v).toLowerCase();
+  if (s === "") return null;
+  if (["true", "vrai", "1", "yes", "y"].includes(s)) return true;
+  if (["false", "faux", "0", "no", "n"].includes(s)) return false;
+  // valeur inconnue => null
+  return null;
 }
 
+/**
+ * Charge produits depuis Google Sheet (CSV)
+ * Retourne un tableau d'objets produits
+ */
 async function fetchProductsFromSheet() {
   const res = await fetch(SHEET_CSV_URL);
   if (!res.ok) throw new Error("Erreur chargement Google Sheet");
 
   const csv = await res.text();
+
   const lines = csv
     .trim()
     .split("\n")
     .map((l) => l.replace(/\r/g, ""))
     .filter(Boolean);
 
+  // détecte séparateur
   const first = lines[0];
   const sep = first.includes(";") && !first.includes(",") ? ";" : ",";
 
@@ -47,37 +56,42 @@ async function fetchProductsFromSheet() {
 
   const products = lines.slice(1).map((line) => {
     const values = splitLine(line, sep);
-    const product = {};
+    const p = {};
 
     headers.forEach((h, i) => {
-      product[h] = values[i] ?? "";
+      p[h] = values[i] ?? "";
     });
 
-    product.price_eur = Number(product.price_eur || 0);
-    product.stock = product.stock === "" ? null : Number(product.stock);
+    // conversions utiles
+    p.price_eur = Number(p.price_eur || 0);
+    p.stock = p.stock === "" ? null : Number(p.stock);
 
-    // active
-    product.active = toBoolActive(product.active);
+    // conversion ACTIVE (très important !)
+    // - null si vide
+    // - true/false sinon
+    p.active = toBoolOrNull(p.active);
 
-    return product;
+    // image fallback
+    if (!p.image_url)
+      p.image_url = "https://via.placeholder.com/600x400?text=MonTh%C3%A9";
+
+    return p;
   });
+
+  // ✅ Filtrage : par défaut on affiche si active est vide (null) OU true
+  const visible = products.filter(
+    (p) => p.active === null || p.active === true
+  );
 
   console.log("Headers détectés :", headers);
   console.log(
     "Exemples active :",
-    products.map((p) => ({
-      id: p.id,
-      activeRaw: p.active,
-      activeCell: p.active,
-    }))
+    products.map((p) => p.active)
   );
-
-  const visible = products.filter((p) => p.active === true);
-
-  console.log(
-    "Produits visibles :",
-    visible.map((p) => p.id)
-  );
+  console.log("Produits visibles :", visible);
 
   return visible;
 }
+
+// Expose la fonction globalement (si tes autres scripts l’appellent)
+window.fetchProductsFromSheet = fetchProductsFromSheet;
