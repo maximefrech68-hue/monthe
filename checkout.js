@@ -2,7 +2,7 @@ let allProducts = [];
 let cart = loadCart();
 
 const GOOGLE_APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxpzkcwbH2a9ZtOBlcaaXMJmQNkD3ZRmcG2K6_0Pnw7M3PET2BasT3enWo4JZpoa3vl/exec";
+  "https://script.google.com/macros/s/AKfycbw03b69Ht10CXfirPtxnG1pvN6aWeTM3RgTqmIOGlC4lk7_ESmjbSUvas2htknGEcM/exec";
 
 // IMPORTANT : ton domaine Netlify (prod)
 const SITE_URL = "https://zippy-hamster-4154f1.netlify.app";
