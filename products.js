@@ -33,6 +33,7 @@ async function fetchProductsFromSheet() {
   const products = lines.slice(1).map((line) => {
     const values = splitLine(line, sep);
     const product = {};
+
     headers.forEach((h, i) => {
       product[h] = values[i] ?? "";
     });
@@ -41,11 +42,19 @@ async function fetchProductsFromSheet() {
     product.price_eur = Number(product.price_eur || 0);
     product.stock = product.stock === "" ? null : Number(product.stock);
 
+    // ✅ active: TRUE/FALSE (par défaut TRUE si vide)
+    // Google Sheets renvoie souvent "TRUE"/"FALSE" en texte
+    const a = String(product.active ?? "")
+      .trim()
+      .toUpperCase();
+    product.active = a === "" ? true : a !== "FALSE";
+
     return product;
   });
 
   console.log("Headers détectés :", headers);
   console.log("Produit #1 :", products[0]);
 
-  return products;
+  // ✅ on ne garde que les produits actifs
+  return products.filter((p) => p.active === true);
 }
