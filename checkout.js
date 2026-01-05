@@ -1,7 +1,6 @@
 let allProducts = [];
 let cart = loadCart();
 
-const SITE_URL = "https://zippy-hamster-4154f1.netlify.app";
 const GOOGLE_APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbzDJg_qstHTSrSg6HJi6-UdaJ5XkXX5PXde7Bw5JWqXso2lgYsWP2BoIjr73oe140Fd/exec";
 
