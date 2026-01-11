@@ -8,7 +8,7 @@ body {
 header {
   text-align: center;
   padding: 2rem 1rem;
-  background: #2f5d50;
+  background: #a0826d;
   color: white;
 }
 
@@ -37,7 +37,7 @@ header {
 
 .price {
   font-weight: bold;
-  color: #2f5d50;
+  color: #a0826d;
 }
 .toolbar {
   display: flex;
@@ -172,7 +172,7 @@ header {
 }
 
 .primary-btn {
-  background: #2f5d50;
+  background: #A0826D;
   color: white;
   border: none;
   padding: 12px 14px;
@@ -211,7 +211,7 @@ header {
 }
 
 .kv b {
-  color: #2f5d50;
+  color: #A0826D;
 }
 
 @media (max-width: 820px) {
