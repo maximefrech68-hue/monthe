@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Administration - MonThé</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .login-screen {
+        max-width: 400px;
+        margin: 4rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      }
+
+      .login-form {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .login-form input {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #d9d2c7;
+        font-size: 16px;
+      }
+
+      .error-msg {
+        background: #fee;
+        color: #c00;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+      }
+
+      .product-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: auto;
+      }
+
+      .product-actions button {
+        flex: 1;
+      }
+
+      .btn-edit {
+        background: #a0826d;
+      }
+
+      .btn-edit:hover {
+        background: #8d7160;
+      }
+
+      .btn-delete {
+        background: #b00020;
+      }
+
+      .btn-delete:hover {
+        background: #900018;
+      }
+
+      .add-btn {
+        background: #4a7c59;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 18px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+        text-decoration: none;
+      }
+
+      .add-btn:hover {
+        background: #3a6449;
+      }
+
+      .logout-btn {
+        background: #666;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+        transition: background 0.2s;
+      }
+
+      .logout-btn:hover {
+        background: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Écran de connexion -->
+    <div id="loginScreen" class="login-screen">
+      <h2>Administration - MonThé</h2>
+      <div id="loginError" class="error-msg"></div>
+      <form id="loginForm" class="login-form">
+        <input
+          type="password"
+          id="password"
+          placeholder="Mot de passe"
+          required
+          autocomplete="current-password"
+        />
+        <button type="submit" class="primary-btn">Se connecter</button>
+      </form>
+    </div>
+
+    <!-- Interface admin (cachée par défaut) -->
+    <div id="adminPanel" class="hidden">
+      <div class="topbar">
+        <a href="admin-form.html" class="add-btn" title="Ajouter un produit">+</a>
+        <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+      </div>
+
+      <header>
+        <h1>MonThé - Administration</h1>
+        <p>Gestion des produits</p>
+      </header>
+
+      <main>
+        <section class="toolbar">
+          <input id="search" type="text" placeholder="Rechercher un produit..." />
+
+          <select id="category">
+            <option value="all">Toutes catégories</option>
+            <option value="noir">Thé noir</option>
+            <option value="vert">Thé vert</option>
+            <option value="oolong">Oolong</option>
+            <option value="infusion">Infusion</option>
+          </select>
+
+          <select id="sort">
+            <option value="default">Trier</option>
+            <option value="price-asc">Prix ↑</option>
+            <option value="price-desc">Prix ↓</option>
+            <option value="name-asc">Nom A→Z</option>
+          </select>
+        </section>
+
+        <section id="products" class="products">
+          <!-- Produits injectés ici -->
+        </section>
+      </main>
+    </div>
+
+    <script src="products.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>

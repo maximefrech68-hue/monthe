@@ -111,7 +111,7 @@ function renderCartModal() {
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML = `
-      <img src="${img}" alt="${p.name}">
+      <img src="${img}" alt="${p.name}" referrerpolicy="no-referrer">
       <div>
         <strong>${p.name}</strong><br/>
         <span>${Number(p.price_eur || 0).toFixed(2)} €</span>

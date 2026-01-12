@@ -24,6 +24,12 @@ header {
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.product .primary-btn {
+  margin-top: auto;
 }
 
 .product img {
@@ -73,6 +79,27 @@ header {
   margin-top: 12px;
   display: flex;
   justify-content: center;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-btn {
+  background: #a0826d;
+  color: white;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 18px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.admin-btn:hover {
+  background: #8d7160;
 }
 
 .cart-btn {

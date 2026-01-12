@@ -101,7 +101,7 @@ function renderCart() {
     row.className = "cart-item";
 
     row.innerHTML = `
-      <img src="${p.image_url}" alt="${p.name}">
+      <img src="${p.image_url}" alt="${p.name}" referrerpolicy="no-referrer">
       <div>
         <strong>${p.name}</strong><br/>
         <span>${Number(p.price_eur || 0).toFixed(2)} €</span>
@@ -170,7 +170,7 @@ function renderProducts(products) {
     card.className = "product";
 
     card.innerHTML = `
-      <img src="${p.image_url}" alt="${p.name}">
+      <img src="${p.image_url}" alt="${p.name}" referrerpolicy="no-referrer">
       <h3>${p.name}</h3>
       <p>${p.short_desc ?? ""}</p>
       <p class="price">${Number(p.price_eur || 0).toFixed(2)} €</p>

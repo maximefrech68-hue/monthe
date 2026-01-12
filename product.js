@@ -56,7 +56,7 @@ function renderCart() {
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML = `
-      <img src="${p.image_url}" alt="${p.name}">
+      <img src="${p.image_url}" alt="${p.name}" referrerpolicy="no-referrer">
       <div>
         <strong>${p.name}</strong><br/>
         <span>${Number(p.price_eur || 0).toFixed(2)} €</span>
@@ -132,7 +132,7 @@ function renderProduct(p) {
   document.title = `${p.name} – MonThé`;
 
   productEl.innerHTML = `
-    <img src="${p.image_url}" alt="${p.name}">
+    <img src="${p.image_url}" alt="${p.name}" referrerpolicy="no-referrer">
     <div>
       <h2>${p.name}</h2>
       <div class="price" style="font-size:18px;">${Number(

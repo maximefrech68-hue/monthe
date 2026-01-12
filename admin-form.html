@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion produit - MonThé</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .admin-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+
+      .admin-card {
+        background: white;
+        border-radius: 14px;
+        padding: 2rem;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      }
+
+      .admin-form {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .form-group {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .form-group label {
+        font-weight: 600;
+        color: #2b2b2b;
+        font-size: 14px;
+      }
+
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #d9d2c7;
+        font-size: 16px;
+        font-family: Arial, sans-serif;
+      }
+
+      .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      .admin-btn {
+        background: #a0826d;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 16px;
+        transition: background 0.2s;
+      }
+
+      .admin-btn:hover {
+        background: #8d7160;
+      }
+
+      .admin-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .error-msg {
+        background: #fee;
+        color: #c00;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+      }
+
+      .success-msg {
+        background: #efe;
+        color: #060;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      @media (max-width: 600px) {
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .hint {
+        font-size: 12px;
+        color: #666;
+        margin-top: 4px;
+      }
+
+      .header-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-bottom: 1rem;
+      }
+
+      .btn-back {
+        background: #666;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background 0.2s;
+      }
+
+      .btn-back:hover {
+        background: #555;
+      }
+
+      .logout-btn {
+        background: #b00020;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+
+      .logout-btn:hover {
+        background: #900018;
+      }
+
+      .image-upload-container {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .image-upload-container input[type="file"] {
+        flex: 1;
+      }
+
+      .image-preview {
+        max-width: 200px;
+        max-height: 150px;
+        border-radius: 8px;
+        display: none;
+      }
+
+      .upload-btn {
+        background: #4a7c59;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+
+      .upload-btn:hover {
+        background: #3a6449;
+      }
+
+      .upload-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>MonThé - Administration</h1>
+      <p id="formTitle">Ajouter un produit</p>
+    </header>
+
+    <main class="admin-container">
+      <div class="admin-card">
+        <div class="header-buttons">
+          <a href="admin.html" class="btn-back">← Retour</a>
+          <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+        </div>
+
+        <div id="errorMsg" class="error-msg"></div>
+        <div id="successMsg" class="success-msg"></div>
+
+        <form id="productForm" class="admin-form">
+          <input type="hidden" id="editMode" value="false" />
+          <input type="hidden" id="originalId" value="" />
+
+          <div class="form-group">
+            <label for="id">ID du produit *</label>
+            <input
+              type="text"
+              id="id"
+              name="id"
+              required
+              placeholder="ex: the-vert-sencha"
+            />
+            <div class="hint">
+              Identifiant unique (lettres minuscules, chiffres, tirets)
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="name">Nom du produit *</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              required
+              placeholder="ex: Thé Vert Sencha"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="category">Catégorie *</label>
+            <select id="category" name="category" required>
+              <option value="">-- Choisir --</option>
+              <option value="noir">Thé noir</option>
+              <option value="vert">Thé vert</option>
+              <option value="oolong">Oolong</option>
+              <option value="infusion">Infusion</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="price_eur">Prix (€) *</label>
+              <input
+                type="number"
+                id="price_eur"
+                name="price_eur"
+                step="0.01"
+                min="0"
+                required
+                placeholder="12.50"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="format">Format *</label>
+              <input
+                type="text"
+                id="format"
+                name="format"
+                required
+                placeholder="ex: 50g, 100g, Boîte de 20"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="stock">Stock disponible</label>
+            <input
+              type="number"
+              id="stock"
+              name="stock"
+              min="0"
+              placeholder="100"
+            />
+            <div class="hint">Laisser vide si illimité</div>
+          </div>
+
+          <div class="form-group">
+            <label for="image_url">Image du produit</label>
+            <div class="image-upload-container">
+              <input
+                type="file"
+                id="imageFile"
+                accept="image/*"
+              />
+              <button type="button" id="uploadBtn" class="upload-btn">
+                Télécharger l'image
+              </button>
+            </div>
+            <input type="hidden" id="image_url" name="image_url" />
+            <img id="imagePreview" class="image-preview" alt="Aperçu" />
+            <div class="hint">
+              Téléchargez une image depuis votre ordinateur (JPG, PNG)
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="short_desc">Description courte</label>
+            <input
+              type="text"
+              id="short_desc"
+              name="short_desc"
+              placeholder="ex: Thé vert délicat du Japon"
+            />
+            <div class="hint">Une phrase d'accroche</div>
+          </div>
+
+          <div class="form-group">
+            <label for="description">Description complète</label>
+            <textarea
+              id="description"
+              name="description"
+              placeholder="Description détaillée du produit..."
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="origin">Origine</label>
+            <input
+              type="text"
+              id="origin"
+              name="origin"
+              placeholder="ex: Japon, Chine, Inde..."
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="tasting_notes">Notes de dégustation</label>
+            <input
+              type="text"
+              id="tasting_notes"
+              name="tasting_notes"
+              placeholder="ex: Notes florales, légèrement sucrées"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="ingredients">Ingrédients</label>
+            <textarea
+              id="ingredients"
+              name="ingredients"
+              placeholder="Liste des ingrédients..."
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="active">Statut *</label>
+            <select id="active" name="active" required>
+              <option value="TRUE">Actif (visible sur le site)</option>
+              <option value="FALSE">Inactif (masqué)</option>
+            </select>
+          </div>
+
+          <button type="submit" class="admin-btn" id="submitBtn">
+            Ajouter le produit
+          </button>
+        </form>
+      </div>
+    </main>
+
+    <script src="admin-form.js"></script>
+  </body>
+</html>

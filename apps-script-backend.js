@@ -1,0 +1,495 @@
+/**
+ * Script Google Apps Script UNIFIÉ
+ * Gère : Commandes + Emails + Produits + Upload d'images
+ */
+
+const OWNER_EMAIL = "maxime.frech.68@gmail.com";
+const SHOP_NAME = "MonThé";
+
+/**
+ * Fonction GET - pour tester que le web app fonctionne
+ */
+function doGet(e) {
+  return ContentService.createTextOutput(
+    "OK - Web App active ✅ (orders + emails + products)"
+  ).setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
+ * Fonction POST UNIFIÉE - Route vers la bonne fonction
+ */
+function doPost(e) {
+  try {
+    const raw = e?.postData?.contents ? e.postData.contents : "{}";
+    const data = JSON.parse(raw);
+
+    // Router selon l'action (check aussi les paramètres URL)
+    const action = data.action || (e.parameter && e.parameter.action);
+
+    if (action === "addProduct") {
+      return addProductToSheet(data.data);
+    } else if (action === "updateProduct") {
+      return updateProductInSheet(data.data, data.originalId);
+    } else if (action === "deleteProduct") {
+      return deleteProductFromSheet(data.id);
+    } else if (action === "uploadImage") {
+      return uploadImageToDrive(data.fileName, data.mimeType, data.base64Data);
+    } else if (data.order_id || data.order_ref || data.email) {
+      // Si pas d'action mais qu'on a des infos de commande, c'est une commande
+      return handleOrder(data);
+    } else {
+      return createResponse(false, "Action inconnue");
+    }
+  } catch (err) {
+    console.error("doPost erreur:", err && err.message ? err.message : err);
+    return createResponse(false, String(err.message || err));
+  }
+}
+
+/* ==================== COMMANDES ==================== */
+
+function handleOrder(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName("Orders") || ss.insertSheet("Orders");
+
+  // Colonnes EXACTES de ta sheet
+  const headersWanted = [
+    "date",
+    "order_id",
+    "email",
+    "full_name",
+    "address",
+    "city",
+    "zip",
+    "items_json",
+    "total_eur",
+    "status",
+  ];
+
+  const headers = ensureHeaders(sh, headersWanted);
+
+  const orderIdCol = headers.indexOf("order_id");
+  const statusCol = headers.indexOf("status");
+
+  if (orderIdCol === -1)
+    throw new Error("Colonne 'order_id' introuvable dans Orders");
+  if (statusCol === -1)
+    throw new Error("Colonne 'status' introuvable dans Orders");
+
+  const orderId =
+    data.order_id ||
+    data.order_ref ||
+    "MT-" + Math.random().toString(16).slice(2, 8).toUpperCase();
+
+  const status = data.status || data.payment_status || "paid";
+
+  const rowObj = {
+    date: new Date(),
+    order_id: orderId,
+    email: data.email || "",
+    full_name: data.full_name || "",
+    address: data.address || "",
+    city: data.city || "",
+    zip: data.zip || "",
+    items_json: JSON.stringify(data.items || []),
+    total_eur: Number(data.total_eur || 0),
+    status: status,
+  };
+
+  // Anti-doublon
+  const existingRow = findRowByOrderRef(sh, orderId, orderIdCol);
+
+  if (existingRow !== -1) {
+    sh.getRange(existingRow, statusCol + 1).setValue(status);
+    sh.getRange(existingRow, 1).setValue(new Date());
+
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: true, order_id: orderId, updated: true })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Nouveau => append
+  const row = buildRowFromHeaders(headers, rowObj);
+  sh.appendRow(row);
+
+  // Envoi emails
+  sendOrderEmails({
+    order_ref: orderId,
+    full_name: data.full_name || "",
+    email: data.email || "",
+    address: data.address || "",
+    city: data.city || "",
+    zip: data.zip || "",
+    items: data.items || [],
+    total_eur: Number(data.total_eur || 0),
+    status: status,
+  });
+
+  return ContentService.createTextOutput(
+    JSON.stringify({ ok: true, order_id: orderId, created: true })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+function formatItemsText(items) {
+  if (!Array.isArray(items) || items.length === 0) return "—";
+  return items
+    .map(
+      (it) =>
+        `- ${it.name || it.id} × ${it.qty || it.quantity || 1} (${Number(
+          it.price_eur || 0
+        ).toFixed(2)} €)`
+    )
+    .join("\n");
+}
+
+function sendOrderEmails(order) {
+  if (!order || typeof order !== "object") {
+    throw new Error("sendOrderEmails(order) : paramètre 'order' manquant.");
+  }
+
+  const clientEmail = (order.email || "").trim();
+  if (!clientEmail) throw new Error("Email client manquant.");
+
+  const itemsText = formatItemsText(order.items);
+
+  // Mail CLIENT
+  const subjectClient = `✅ Confirmation de commande ${order.order_ref} – ${SHOP_NAME}`;
+  const bodyClient = `
+Bonjour ${order.full_name || ""},
+
+Merci pour votre commande chez ${SHOP_NAME} ❤️
+
+Référence : ${order.order_ref}
+Total : ${Number(order.total_eur || 0).toFixed(2)} €
+Statut : ${order.status || "paid"}
+
+Articles :
+${itemsText}
+
+Adresse de livraison :
+${order.address || ""}, ${order.zip || ""} ${order.city || ""}
+
+À très vite,
+${SHOP_NAME}
+`.trim();
+
+  MailApp.sendEmail({
+    to: clientEmail,
+    subject: subjectClient,
+    body: bodyClient,
+  });
+
+  // Mail OWNER
+  const subjectOwner = `🧾 Nouvelle commande ${order.order_ref} – ${Number(
+    order.total_eur || 0
+  ).toFixed(2)} €`;
+  const bodyOwner = `
+Nouvelle commande reçue ✅
+
+Réf : ${order.order_ref}
+Client : ${order.full_name || ""} (${clientEmail})
+Adresse : ${order.address || ""}, ${order.zip || ""} ${order.city || ""}
+Total : ${Number(order.total_eur || 0).toFixed(2)} €
+Statut : ${order.status || "paid"}
+
+Articles :
+${itemsText}
+`.trim();
+
+  MailApp.sendEmail({
+    to: OWNER_EMAIL,
+    subject: subjectOwner,
+    body: bodyOwner,
+  });
+}
+
+function ensureHeaders(sh, headersWanted) {
+  if (sh.getLastRow() === 0) {
+    sh.appendRow(headersWanted);
+    return headersWanted;
+  }
+  return sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+}
+
+function findRowByOrderRef(sh, orderRef, orderRefColIndex) {
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return -1;
+
+  const values = sh
+    .getRange(2, orderRefColIndex + 1, lastRow - 1, 1)
+    .getValues();
+  for (let i = 0; i < values.length; i++) {
+    if (String(values[i][0]).trim() === String(orderRef).trim()) return i + 2;
+  }
+  return -1;
+}
+
+function buildRowFromHeaders(headers, rowObj) {
+  return headers.map((h) => {
+    const key = String(h || "").trim();
+    return key in rowObj ? rowObj[key] : "";
+  });
+}
+
+/* ==================== PRODUITS ==================== */
+
+function createResponse(success, message, additionalData = {}) {
+  return ContentService.createTextOutput(
+    JSON.stringify({
+      success: success,
+      message: message,
+      ...additionalData,
+    })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+function addProductToSheet(productData) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Products");
+
+    if (!sheet) {
+      throw new Error("La feuille 'Products' n'existe pas");
+    }
+
+    // Vérifier que l'ID n'existe pas déjà
+    const idColumn = getColumnIndex(sheet, "id");
+    const ids = sheet
+      .getRange(2, idColumn, sheet.getLastRow() - 1, 1)
+      .getValues()
+      .flat();
+
+    if (ids.includes(productData.id)) {
+      throw new Error("Un produit avec cet ID existe déjà");
+    }
+
+    // Récupérer les en-têtes
+    const headers = sheet
+      .getRange(1, 1, 1, sheet.getLastColumn())
+      .getValues()[0];
+
+    // Créer la nouvelle ligne
+    const newRow = headers.map((header) => {
+      return productData.hasOwnProperty(header) ? productData[header] : "";
+    });
+
+    // Ajouter la ligne
+    sheet.appendRow(newRow);
+
+    Logger.log("Produit ajouté: " + productData.name);
+    return createResponse(true, "Produit ajouté avec succès", {
+      productId: productData.id,
+    });
+  } catch (error) {
+    Logger.log("Erreur addProductToSheet: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+function updateProductInSheet(productData, originalId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Products");
+
+    if (!sheet) {
+      throw new Error("La feuille 'Products' n'existe pas");
+    }
+
+    // Trouver la ligne du produit
+    const idColumn = getColumnIndex(sheet, "id");
+    const data = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idColumn - 1] === originalId) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      throw new Error("Produit non trouvé");
+    }
+
+    // Récupérer les en-têtes
+    const headers = data[0];
+
+    // Mettre à jour les valeurs
+    headers.forEach((header, index) => {
+      if (productData.hasOwnProperty(header)) {
+        sheet.getRange(rowIndex, index + 1).setValue(productData[header]);
+      }
+    });
+
+    Logger.log("Produit modifié: " + productData.name);
+    return createResponse(true, "Produit modifié avec succès", {
+      productId: productData.id,
+    });
+  } catch (error) {
+    Logger.log("Erreur updateProductInSheet: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+function deleteProductFromSheet(productId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Products");
+
+    if (!sheet) {
+      throw new Error("La feuille 'Products' n'existe pas");
+    }
+
+    // Trouver la ligne du produit
+    const idColumn = getColumnIndex(sheet, "id");
+    const data = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idColumn - 1] === productId) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      throw new Error("Produit non trouvé");
+    }
+
+    // Supprimer la ligne
+    sheet.deleteRow(rowIndex);
+
+    Logger.log("Produit supprimé: " + productId);
+    return createResponse(true, "Produit supprimé avec succès", {
+      productId: productId,
+    });
+  } catch (error) {
+    Logger.log("Erreur deleteProductFromSheet: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+function getColumnIndex(sheet, columnName) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const index = headers.indexOf(columnName);
+  if (index === -1) {
+    throw new Error("Colonne '" + columnName + "' non trouvée");
+  }
+  return index + 1;
+}
+
+/* ==================== UPLOAD IMAGES ==================== */
+
+function uploadImageToDrive(fileName, mimeType, base64Data) {
+  try {
+    // Créer ou récupérer le dossier "MonThe-Images" à la racine de Drive
+    let folder;
+    const folders = DriveApp.getFoldersByName("MonThe-Images");
+
+    if (folders.hasNext()) {
+      folder = folders.next();
+    } else {
+      folder = DriveApp.createFolder("MonThe-Images");
+      Logger.log("Dossier MonThe-Images créé");
+    }
+
+    // Décoder le base64
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(base64Data),
+      mimeType,
+      fileName
+    );
+
+    // Créer le fichier dans le dossier
+    const file = folder.createFile(blob);
+
+    // Rendre le fichier VRAIMENT public (accessible par tout le monde)
+    file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+
+    // Alternative : si la ligne ci-dessus ne fonctionne pas, essayer :
+    // Drive.Permissions.insert(
+    //   {
+    //     'type': 'anyone',
+    //     'role': 'reader'
+    //   },
+    //   file.getId()
+    // );
+
+    // Obtenir l'URL publique optimisée pour affichage dans <img>
+    const fileId = file.getId();
+
+    // MEILLEURE URL pour embedding direct dans <img>
+    // Cette URL fonctionne mieux avec referrerpolicy="no-referrer"
+    const publicUrl =
+      "https://drive.google.com/thumbnail?id=" + fileId + "&sz=w1000";
+
+    // URLs alternatives
+    const directUrl = "https://drive.google.com/uc?export=view&id=" + fileId;
+    const googleUserContentUrl =
+      "https://lh3.googleusercontent.com/d/" + fileId;
+    const driveUrl = "https://drive.google.com/file/d/" + fileId + "/view";
+
+    Logger.log("Image uploadée: " + fileName + " -> " + publicUrl);
+
+    return createResponse(true, "Image téléchargée avec succès", {
+      url: publicUrl,
+      googleUserContentUrl: googleUserContentUrl,
+      driveUrl: driveUrl,
+      fileId: fileId,
+      fileName: fileName,
+    });
+  } catch (error) {
+    Logger.log("Erreur uploadImageToDrive: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/* ==================== TESTS ==================== */
+
+function testSendOrderEmails() {
+  const fakeOrder = {
+    order_ref: "TEST-1234",
+    full_name: "Maxime Frech",
+    email: OWNER_EMAIL,
+    address: "12 rue test",
+    city: "Mulhouse",
+    zip: "68100",
+    items: [
+      { id: "sencha", name: "Sencha Vert", qty: 1, price_eur: 14.5 },
+      { id: "earl-grey", name: "Earl Grey Noir", qty: 2, price_eur: 12.9 },
+    ],
+    total_eur: 40.3,
+    status: "paid",
+  };
+  sendOrderEmails(fakeOrder);
+}
+
+function testAddProduct() {
+  const testData = {
+    id: "test-produit-3",
+    name: "Produit Test 3",
+    category: "vert",
+    price_eur: "15.99",
+    format: "100g",
+    stock: "50",
+    image_url: "https://via.placeholder.com/600x400",
+    short_desc: "Description courte",
+    description: "Description complète du produit test",
+    origin: "Japon",
+    tasting_notes: "Notes florales",
+    ingredients: "Thé vert, fleurs de jasmin",
+    active: "TRUE",
+  };
+
+  const result = addProductToSheet(testData);
+  Logger.log(result.getContent());
+}
+
+function testUploadImage() {
+  // Image de test en base64 (une petite image 1x1 pixel rouge)
+  const base64Data =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+
+  const result = uploadImageToDrive("test-image.png", "image/png", base64Data);
+  Logger.log(result.getContent());
+}
