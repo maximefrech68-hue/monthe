@@ -158,7 +158,7 @@ function renderProduct(p) {
 
   // Déterminer le statut du stock
   const stock = Number(p.stock || 0);
-  const isInStock = stock >= 5;
+  const isInStock = stock > 0;
   const stockBadgeClass = isInStock ? "stock-badge stock-available" : "stock-badge stock-unavailable";
   const stockBadgeText = isInStock ? `${stock} unité(s) disponible(s)` : "Indisponible";
 
@@ -206,14 +206,10 @@ function updateAddToCartButton(p) {
 
   if (!addBtn) return;
 
-  if (currentQty >= stock) {
+  if (currentQty >= stock || stock <= 0) {
     addBtn.classList.add("btn-disabled");
     addBtn.disabled = true;
-    addBtn.textContent = "Stock épuisé";
-  } else if (stock < 5) {
-    addBtn.classList.add("btn-disabled");
-    addBtn.disabled = true;
-    addBtn.textContent = "Indisponible";
+    addBtn.textContent = currentQty >= stock ? "Stock épuisé" : "Indisponible";
   }
 }
 

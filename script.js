@@ -196,7 +196,7 @@ function renderProducts(products) {
 
     // Déterminer le statut du stock
     const stock = Number(p.stock || 0);
-    const isInStock = stock >= 5;
+    const isInStock = stock > 0;
     const stockBadgeClass = isInStock ? "stock-badge stock-available" : "stock-badge stock-unavailable";
     const stockBadgeText = isInStock ? "En stock" : "Indisponible";
 
