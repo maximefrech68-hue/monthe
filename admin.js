@@ -3,6 +3,10 @@ const ADMIN_PASSWORD = "Pdjs895(!s$";
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
 
+// Protection anti-brute-force
+const MAX_ATTEMPTS = 3;
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
+
 // Éléments DOM
 const loginScreen = document.getElementById("loginScreen");
 const adminPanel = document.getElementById("adminPanel");
@@ -15,6 +19,88 @@ const categoryEl = document.querySelector("#category");
 const sortEl = document.querySelector("#sort");
 
 let allProducts = [];
+let lockoutTimer = null;
+
+// Fonctions anti-brute-force
+function getLoginAttempts() {
+  try {
+    const data = localStorage.getItem("adminLoginAttempts");
+    return data ? JSON.parse(data) : { count: 0, blockedUntil: null };
+  } catch {
+    return { count: 0, blockedUntil: null };
+  }
+}
+
+function saveLoginAttempts(count, blockedUntil = null) {
+  localStorage.setItem("adminLoginAttempts", JSON.stringify({ count, blockedUntil }));
+}
+
+function isBlocked() {
+  const attempts = getLoginAttempts();
+  if (attempts.blockedUntil && Date.now() < attempts.blockedUntil) {
+    return attempts.blockedUntil;
+  }
+  // Si le blocage est expiré, réinitialiser
+  if (attempts.blockedUntil && Date.now() >= attempts.blockedUntil) {
+    saveLoginAttempts(0, null);
+  }
+  return false;
+}
+
+function incrementFailedAttempts() {
+  const attempts = getLoginAttempts();
+  const newCount = attempts.count + 1;
+
+  if (newCount >= MAX_ATTEMPTS) {
+    const blockedUntil = Date.now() + LOCKOUT_DURATION;
+    saveLoginAttempts(newCount, blockedUntil);
+    return blockedUntil;
+  } else {
+    saveLoginAttempts(newCount, null);
+    return false;
+  }
+}
+
+function resetLoginAttempts() {
+  saveLoginAttempts(0, null);
+}
+
+function formatTimeRemaining(blockedUntil) {
+  const remaining = Math.ceil((blockedUntil - Date.now()) / 1000);
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function updateLockoutMessage(blockedUntil) {
+  const timeRemaining = formatTimeRemaining(blockedUntil);
+  showError(`Trop de tentatives échouées. Réessayez dans ${timeRemaining}.`);
+
+  // Mettre à jour le message chaque seconde
+  lockoutTimer = setTimeout(() => {
+    if (Date.now() < blockedUntil) {
+      updateLockoutMessage(blockedUntil);
+    } else {
+      showError("");
+      enableLoginForm();
+      resetLoginAttempts();
+    }
+  }, 1000);
+}
+
+function disableLoginForm() {
+  const passwordInput = document.getElementById("password");
+  const submitBtn = loginForm.querySelector('button[type="submit"]');
+  if (passwordInput) passwordInput.disabled = true;
+  if (submitBtn) submitBtn.disabled = true;
+}
+
+function enableLoginForm() {
+  const passwordInput = document.getElementById("password");
+  const submitBtn = loginForm.querySelector('button[type="submit"]');
+  if (passwordInput) passwordInput.disabled = false;
+  if (submitBtn) submitBtn.disabled = false;
+}
 
 // Vérifier l'authentification
 function checkAuth() {
@@ -29,6 +115,15 @@ function checkAuth() {
 function showLoginScreen() {
   loginScreen.classList.remove("hidden");
   adminPanel.classList.add("hidden");
+
+  // Vérifier si l'utilisateur est bloqué
+  const blockedUntil = isBlocked();
+  if (blockedUntil) {
+    disableLoginForm();
+    updateLockoutMessage(blockedUntil);
+  } else {
+    enableLoginForm();
+  }
 }
 
 function showAdminPanel() {
@@ -48,14 +143,37 @@ function showError(message) {
 // Gestion de la connexion
 loginForm.addEventListener("submit", (e) => {
   e.preventDefault();
+
+  // Vérifier si bloqué
+  const blockedUntil = isBlocked();
+  if (blockedUntil) {
+    updateLockoutMessage(blockedUntil);
+    return;
+  }
+
   const password = document.getElementById("password").value;
 
   if (password === ADMIN_PASSWORD) {
+    // Connexion réussie - réinitialiser les tentatives
+    resetLoginAttempts();
+    if (lockoutTimer) clearTimeout(lockoutTimer);
     sessionStorage.setItem("adminAuth", "true");
     showAdminPanel();
     loginForm.reset();
   } else {
-    showError("Mot de passe incorrect.");
+    // Échec - incrémenter les tentatives
+    const newBlockedUntil = incrementFailedAttempts();
+
+    if (newBlockedUntil) {
+      // Bloqué après 3 tentatives
+      disableLoginForm();
+      updateLockoutMessage(newBlockedUntil);
+    } else {
+      // Pas encore bloqué
+      const attempts = getLoginAttempts();
+      const remaining = MAX_ATTEMPTS - attempts.count;
+      showError(`Mot de passe incorrect. ${remaining} tentative(s) restante(s).`);
+    }
   }
 });
 
