@@ -345,6 +345,23 @@ async function handleStripeReturn() {
     try {
       const data = await sendOrderToGoogleSheet(pending);
 
+      // Décrémenter le stock des produits commandés
+      try {
+        await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "decrementStock",
+            items: pending.items,
+          }),
+        });
+        console.log("Stock décrémenté avec succès");
+      } catch (stockErr) {
+        console.error("Erreur décrémentation stock:", stockErr);
+        // Ne pas bloquer la confirmation même si le stock n'a pas pu être mis à jour
+      }
+
       // affiche confirmation
       orderRefEl.textContent = data.order_ref || pending.order_ref;
 

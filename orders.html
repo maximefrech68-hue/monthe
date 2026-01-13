@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Commandes - MonThé</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .login-screen {
+        max-width: 400px;
+        margin: 4rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      }
+
+      .login-form {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .login-form input {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #d9d2c7;
+        font-size: 16px;
+      }
+
+      .error-msg {
+        background: #fee;
+        color: #c00;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+      }
+
+      .orders-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      }
+
+      .orders-table th {
+        background: #a0826d;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+      }
+
+      .orders-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .orders-table tr:hover {
+        background: #f7f4ef;
+      }
+
+      .status-badge {
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .status-paid {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status-pending {
+        background: #fff3cd;
+        color: #856404;
+      }
+
+      .btn-details,
+      .btn-delete {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 4px;
+      }
+
+      .btn-details {
+        background: #a0826d;
+        color: white;
+      }
+
+      .btn-details:hover {
+        background: #8d7160;
+      }
+
+      .btn-delete {
+        background: #b00020;
+        color: white;
+      }
+
+      .btn-delete:hover {
+        background: #900018;
+      }
+
+      .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+      }
+
+      .modal-content {
+        background: white;
+        margin: 5% auto;
+        padding: 20px;
+        border-radius: 14px;
+        width: 80%;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+
+      .close {
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #666;
+      }
+
+      .close:hover {
+        color: #000;
+      }
+
+      .export-btn {
+        background: #4a7c59;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+        transition: background 0.2s;
+      }
+
+      .export-btn:hover {
+        background: #3a6449;
+      }
+
+      .select-btn {
+        background: #a0826d;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+        transition: background 0.2s;
+      }
+
+      .select-btn:hover {
+        background: #8d7160;
+      }
+
+      .delete-selected-btn {
+        background: #b00020;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+        transition: background 0.2s;
+      }
+
+      .delete-selected-btn:hover {
+        background: #900018;
+      }
+
+      .btn-back {
+        background: #a0826d;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+        transition: background 0.2s;
+        text-decoration: none;
+      }
+
+      .btn-back:hover {
+        background: #8d7160;
+      }
+
+      .logout-btn {
+        background: #666;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+        transition: background 0.2s;
+      }
+
+      .logout-btn:hover {
+        background: #555;
+      }
+
+      .orders-container {
+        padding: 2rem;
+      }
+
+      .column-filter {
+        display: block;
+        width: 100%;
+        margin-top: 4px;
+        padding: 4px 6px;
+        font-size: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        cursor: pointer;
+      }
+
+      .column-filter:focus {
+        outline: none;
+        border-color: rgba(255, 255, 255, 0.6);
+      }
+
+      .orders-table th {
+        background: #a0826d;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        vertical-align: top;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Écran de connexion -->
+    <div id="loginScreen" class="login-screen">
+      <h2>Commandes - MonThé</h2>
+      <div id="loginError" class="error-msg"></div>
+      <form id="loginForm" class="login-form">
+        <input
+          type="password"
+          id="password"
+          placeholder="Mot de passe"
+          required
+          autocomplete="current-password"
+        />
+        <button type="submit" class="primary-btn">Se connecter</button>
+      </form>
+    </div>
+
+    <!-- Interface commandes (cachée par défaut) -->
+    <div id="ordersPanel" class="hidden">
+      <div class="topbar">
+        <a href="admin.html" class="btn-back">← Produits</a>
+        <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+      </div>
+
+      <header>
+        <h1>MonThé - Commandes</h1>
+        <p>Gestion des commandes clients</p>
+        <p id="ordersCount" style="font-size: 14px; color: #ff8c00; margin-top: 0.5rem;">
+          <strong id="ordersCountNumber">0</strong> commande(s)
+        </p>
+      </header>
+
+      <main>
+        <!-- Toolbar filtres -->
+        <section class="toolbar">
+          <input
+            id="search"
+            type="text"
+            placeholder="Rechercher par réf, email, nom..."
+          />
+
+          <button id="selectAllBtn" class="select-btn">☑ Tout sélectionner</button>
+          <button id="deleteSelectedBtn" class="delete-selected-btn">🗑 Supprimer sélection</button>
+          <button id="exportBtn" class="export-btn">📥 Exporter CSV</button>
+        </section>
+
+        <!-- Tableau commandes -->
+        <section class="orders-container">
+          <table id="ordersTable" class="orders-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;"><input type="checkbox" id="selectAllCheckbox" /></th>
+                <th>Référence</th>
+                <th>
+                  Date
+                  <select id="dateFilter" class="column-filter">
+                    <option value="all">Toutes</option>
+                    <option value="today">Aujourd'hui</option>
+                    <option value="week">Cette semaine</option>
+                    <option value="month">Ce mois</option>
+                  </select>
+                </th>
+                <th>
+                  Client
+                  <select id="clientFilter" class="column-filter">
+                    <option value="all">Tous</option>
+                    <!-- Options injectées dynamiquement -->
+                  </select>
+                </th>
+                <th>
+                  Email
+                  <select id="emailFilter" class="column-filter">
+                    <option value="all">Tous</option>
+                    <!-- Options injectées dynamiquement -->
+                  </select>
+                </th>
+                <th>
+                  Ville
+                  <select id="cityFilter" class="column-filter">
+                    <option value="all">Toutes</option>
+                    <!-- Options injectées dynamiquement -->
+                  </select>
+                </th>
+                <th>
+                  Montant
+                  <select id="amountFilter" class="column-filter">
+                    <option value="all">Tous</option>
+                    <option value="0-20">0-20€</option>
+                    <option value="20-50">20-50€</option>
+                    <option value="50-100">50-100€</option>
+                    <option value="100+">100€+</option>
+                  </select>
+                </th>
+                <th>
+                  Statut
+                  <select id="statusFilter" class="column-filter">
+                    <option value="all">Tous</option>
+                    <!-- Options injectées dynamiquement -->
+                  </select>
+                </th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ordersBody">
+              <!-- Lignes injectées ici -->
+            </tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+
+    <!-- Modal détails commande -->
+    <div id="orderModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="orderDetails"></div>
+      </div>
+    </div>
+
+    <script src="orders.js"></script>
+  </body>
+</html>

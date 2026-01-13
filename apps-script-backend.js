@@ -34,6 +34,12 @@ function doPost(e) {
       return deleteProductFromSheet(data.id);
     } else if (action === "uploadImage") {
       return uploadImageToDrive(data.fileName, data.mimeType, data.base64Data);
+    } else if (action === "deleteOrder") {
+      return deleteOrderFromSheet(data.order_id);
+    } else if (action === "updateStock") {
+      return updateProductStock(data.product_id, data.stock);
+    } else if (action === "decrementStock") {
+      return decrementProductStock(data.items);
     } else if (data.order_id || data.order_ref || data.email) {
       // Si pas d'action mais qu'on a des infos de commande, c'est une commande
       return handleOrder(data);
@@ -376,6 +382,147 @@ function getColumnIndex(sheet, columnName) {
     throw new Error("Colonne '" + columnName + "' non trouvée");
   }
   return index + 1;
+}
+
+function deleteOrderFromSheet(orderId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Orders");
+
+    if (!sheet) {
+      throw new Error("La feuille 'Orders' n'existe pas");
+    }
+
+    // Trouver la ligne de la commande
+    const data = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+
+    // Chercher dans la colonne order_id (colonne 2, index 1)
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][1] === orderId) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      throw new Error("Commande non trouvée");
+    }
+
+    // Supprimer la ligne
+    sheet.deleteRow(rowIndex);
+
+    Logger.log("Commande supprimée: " + orderId);
+    return createResponse(true, "Commande supprimée avec succès", {
+      orderId: orderId,
+    });
+  } catch (error) {
+    Logger.log("Erreur deleteOrderFromSheet: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/* ==================== GESTION DU STOCK ==================== */
+
+function updateProductStock(productId, newStock) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Products");
+
+    if (!sheet) {
+      throw new Error("La feuille 'Products' n'existe pas");
+    }
+
+    // Trouver la ligne du produit
+    const data = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+
+    // Chercher dans la colonne id (colonne 1, index 0)
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === productId) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      throw new Error("Produit non trouvé: " + productId);
+    }
+
+    // Trouver l'index de la colonne stock
+    const headers = data[0];
+    const stockColIndex = headers.indexOf("stock");
+
+    if (stockColIndex === -1) {
+      throw new Error("Colonne 'stock' non trouvée");
+    }
+
+    // Mettre à jour le stock (colonne stock, indexé à partir de 1)
+    sheet.getRange(rowIndex, stockColIndex + 1).setValue(newStock);
+
+    Logger.log("Stock mis à jour: " + productId + " -> " + newStock);
+    return createResponse(true, "Stock mis à jour avec succès", {
+      productId: productId,
+      stock: newStock,
+    });
+  } catch (error) {
+    Logger.log("Erreur updateProductStock: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+function decrementProductStock(items) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Products");
+
+    if (!sheet) {
+      throw new Error("La feuille 'Products' n'existe pas");
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const stockColIndex = headers.indexOf("stock");
+
+    if (stockColIndex === -1) {
+      throw new Error("Colonne 'stock' non trouvée");
+    }
+
+    let updatedCount = 0;
+
+    // Pour chaque article commandé
+    items.forEach((item) => {
+      // Trouver la ligne du produit
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === item.id) {
+          const currentStock = Number(data[i][stockColIndex]) || 0;
+          const newStock = Math.max(0, currentStock - item.qty);
+
+          // Mettre à jour le stock
+          sheet.getRange(i + 1, stockColIndex + 1).setValue(newStock);
+          updatedCount++;
+
+          Logger.log(
+            "Stock décrémenté: " +
+              item.id +
+              " (" +
+              currentStock +
+              " -> " +
+              newStock +
+              ")"
+          );
+          break;
+        }
+      }
+    });
+
+    return createResponse(true, "Stock décrémenté avec succès", {
+      updatedCount: updatedCount,
+    });
+  } catch (error) {
+    Logger.log("Erreur decrementProductStock: " + error);
+    return createResponse(false, error.toString());
+  }
 }
 
 /* ==================== UPLOAD IMAGES ==================== */

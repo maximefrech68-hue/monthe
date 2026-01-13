@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion du Stock - MonThé</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .login-screen {
+        max-width: 400px;
+        margin: 4rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      }
+
+      .login-form {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .login-form input {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #d9d2c7;
+        font-size: 16px;
+      }
+
+      .error-msg {
+        background: #fee;
+        color: #c00;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+      }
+
+      .stock-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      }
+
+      .stock-table th {
+        background: #a0826d;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+      }
+
+      .stock-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .stock-table tr:hover {
+        background: #f7f4ef;
+      }
+
+      .stock-table tr.low-stock {
+        background: #ffebee;
+      }
+
+      .stock-table tr.low-stock:hover {
+        background: #ffcdd2;
+      }
+
+      .stock-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .stock-input {
+        width: 60px;
+        padding: 4px 8px;
+        text-align: center;
+        border: 1px solid #d9d2c7;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      .btn-stock {
+        width: 30px;
+        height: 30px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .btn-increment {
+        background: #4caf50;
+        color: white;
+      }
+
+      .btn-increment:hover {
+        background: #45a049;
+      }
+
+      .btn-decrement {
+        background: #f44336;
+        color: white;
+      }
+
+      .btn-decrement:hover {
+        background: #da190b;
+      }
+
+      .btn-back {
+        background: #a0826d;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+        transition: background 0.2s;
+        text-decoration: none;
+      }
+
+      .btn-back:hover {
+        background: #8d7160;
+      }
+
+      .logout-btn {
+        background: #666;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+        transition: background 0.2s;
+      }
+
+      .logout-btn:hover {
+        background: #555;
+      }
+
+      .stock-container {
+        padding: 2rem;
+      }
+
+      .stock-count {
+        font-size: 14px;
+        color: #ff8c00;
+        margin-top: 0.5rem;
+      }
+
+      .category-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .category-noir {
+        background: #3e2723;
+        color: white;
+      }
+
+      .category-vert {
+        background: #4caf50;
+        color: white;
+      }
+
+      .category-oolong {
+        background: #ff9800;
+        color: white;
+      }
+
+      .category-infusion {
+        background: #9c27b0;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Écran de connexion -->
+    <div id="loginScreen" class="login-screen">
+      <h2>Gestion du Stock - MonThé</h2>
+      <div id="loginError" class="error-msg"></div>
+      <form id="loginForm" class="login-form">
+        <input
+          type="password"
+          id="password"
+          placeholder="Mot de passe"
+          required
+          autocomplete="current-password"
+        />
+        <button type="submit" class="primary-btn">Se connecter</button>
+      </form>
+    </div>
+
+    <!-- Interface stock (cachée par défaut) -->
+    <div id="stockPanel" class="hidden">
+      <div class="topbar">
+        <a href="admin.html" class="btn-back">← Produits</a>
+        <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+      </div>
+
+      <header>
+        <h1>MonThé - Gestion du Stock</h1>
+        <p>Suivi et ajustement des stocks</p>
+        <p class="stock-count">
+          <strong id="productCount">0</strong> produit(s) |
+          <strong id="lowStockCount" style="color: #f44336;">0</strong> produit(s) en alerte
+        </p>
+      </header>
+
+      <main>
+        <!-- Toolbar filtres -->
+        <section class="toolbar">
+          <input
+            id="search"
+            type="text"
+            placeholder="Rechercher un produit..."
+          />
+
+          <select id="categoryFilter">
+            <option value="all">Toutes catégories</option>
+            <option value="noir">Thé noir</option>
+            <option value="vert">Thé vert</option>
+            <option value="oolong">Oolong</option>
+            <option value="infusion">Infusion</option>
+          </select>
+
+          <select id="stockFilter">
+            <option value="all">Tous les stocks</option>
+            <option value="low">Stock faible (&lt; 5)</option>
+            <option value="ok">Stock correct (&gt;= 5)</option>
+          </select>
+        </section>
+
+        <!-- Tableau stock -->
+        <section class="stock-container">
+          <table id="stockTable" class="stock-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Produit</th>
+                <th>Catégorie</th>
+                <th>Prix</th>
+                <th>Stock</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="stockBody">
+              <!-- Lignes injectées ici -->
+            </tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+
+    <script src="stock.js"></script>
+  </body>
+</html>
