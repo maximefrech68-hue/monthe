@@ -183,7 +183,9 @@ function renderProducts(products) {
         <p class="price">${Number(p.price_eur || 0).toFixed(2)} €</p>
         <span class="${stockBadgeClass}">${stockBadgeText}</span>
       </div>
-      <button class="primary-btn" data-add="${p.id}">Ajouter au panier</button>
+      <button class="primary-btn ${!isInStock ? 'btn-disabled' : ''}" data-add="${p.id}" ${!isInStock ? 'disabled' : ''}>
+        ${isInStock ? 'Ajouter au panier' : 'Indisponible'}
+      </button>
     `;
     card.style.cursor = "pointer";
     card.addEventListener("click", (e) => {
@@ -200,6 +202,9 @@ function renderProducts(products) {
 container.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-add]");
   if (!btn) return;
+
+  // Empêcher l'ajout au panier si le bouton est désactivé
+  if (btn.disabled || btn.classList.contains("btn-disabled")) return;
 
   const id = btn.dataset.add;
   addToCart(id);
