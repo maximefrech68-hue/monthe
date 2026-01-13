@@ -5,7 +5,6 @@
 
 const OWNER_EMAIL = "maxime.frech.68@gmail.com";
 const SHOP_NAME = "MonThé";
-const ADMIN_PASSWORD = "Pdjs895(!s$"; // Mot de passe admin stocké côté serveur
 
 /**
  * Fonction GET - pour tester que le web app fonctionne
@@ -41,8 +40,6 @@ function doPost(e) {
       return updateProductStock(data.product_id, data.stock);
     } else if (action === "decrementStock") {
       return decrementProductStock(data.items);
-    } else if (action === "authenticate") {
-      return authenticateAdmin(data.password);
     } else if (data.order_id || data.order_ref || data.email) {
       // Si pas d'action mais qu'on a des infos de commande, c'est une commande
       return handleOrder(data);
@@ -633,34 +630,6 @@ function testAddProduct() {
 
   const result = addProductToSheet(testData);
   Logger.log(result.getContent());
-}
-
-/* ==================== AUTHENTIFICATION ADMIN ==================== */
-
-/**
- * Authentifie un administrateur avec son mot de passe
- * @param {string} password - Le mot de passe à vérifier
- * @returns {Object} - Réponse avec token si succès
- */
-function authenticateAdmin(password) {
-  try {
-    if (!password) {
-      return createResponse(false, "Mot de passe manquant");
-    }
-
-    if (password === ADMIN_PASSWORD) {
-      // Générer un token simple (timestamp + random pour unicité)
-      const token = Utilities.base64Encode(
-        Date.now() + "-" + Math.random().toString(36).substring(2, 15)
-      );
-      return createResponse(true, "Authentification réussie", { token: token });
-    } else {
-      return createResponse(false, "Mot de passe incorrect");
-    }
-  } catch (error) {
-    Logger.log("Erreur authenticateAdmin: " + error);
-    return createResponse(false, error.toString());
-  }
 }
 
 function testUploadImage() {
