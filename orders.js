@@ -31,6 +31,7 @@ const dateFilterEl = document.getElementById("dateFilter");
 const clientFilterEl = document.getElementById("clientFilter");
 const emailFilterEl = document.getElementById("emailFilter");
 const cityFilterEl = document.getElementById("cityFilter");
+const productFilterEl = document.getElementById("productFilter");
 const amountFilterEl = document.getElementById("amountFilter");
 const statusFilterEl = document.getElementById("statusFilter");
 const exportBtn = document.getElementById("exportBtn");
@@ -430,6 +431,7 @@ function applyFilters() {
   const clientFilter = normalize(clientFilterEl?.value);
   const emailFilter = normalize(emailFilterEl?.value);
   const cityFilter = normalize(cityFilterEl?.value);
+  const productFilter = normalize(productFilterEl?.value);
   const amountFilter = normalize(amountFilterEl?.value);
   const status = normalize(statusFilterEl?.value);
 
@@ -487,6 +489,15 @@ function applyFilters() {
   // Filtre ville
   if (cityFilter && cityFilter !== "all") {
     filtered = filtered.filter((o) => normalize(o.city) === cityFilter);
+  }
+
+  // Filtre produit
+  if (productFilter && productFilter !== "all") {
+    filtered = filtered.filter((o) => {
+      if (!o.items || o.items.length === 0) return false;
+      // Vérifier si au moins un produit correspond au filtre
+      return o.items.some((item) => normalize(item.name) === productFilter);
+    });
   }
 
   // Filtre montant
@@ -589,6 +600,34 @@ function populateCityFilter() {
     option.value = normalize(city);
     option.textContent = city;
     cityFilterEl.appendChild(option);
+  });
+}
+
+// Peupler dynamiquement le filtre des produits
+function populateProductFilter() {
+  const products = new Set();
+  allOrders.forEach((o) => {
+    if (o.items && o.items.length > 0) {
+      o.items.forEach((item) => {
+        if (item.name && item.name.trim() !== "") {
+          products.add(item.name.trim());
+        }
+      });
+    }
+  });
+
+  // Trier les produits par ordre alphabétique
+  const sortedProducts = Array.from(products).sort();
+
+  // Vider les options existantes (sauf "Tous")
+  productFilterEl.innerHTML = '<option value="all">Tous</option>';
+
+  // Ajouter chaque produit
+  sortedProducts.forEach((product) => {
+    const option = document.createElement("option");
+    option.value = normalize(product);
+    option.textContent = product;
+    productFilterEl.appendChild(option);
   });
 }
 
@@ -892,6 +931,7 @@ async function init() {
     populateClientFilter();
     populateEmailFilter();
     populateCityFilter();
+    populateProductFilter();
     populateStatusFilter();
     renderOrders(allOrders);
 
@@ -900,11 +940,12 @@ async function init() {
     clientFilterEl?.addEventListener("change", applyFilters);
     emailFilterEl?.addEventListener("change", applyFilters);
     cityFilterEl?.addEventListener("change", applyFilters);
+    productFilterEl?.addEventListener("change", applyFilters);
     amountFilterEl?.addEventListener("change", applyFilters);
     statusFilterEl?.addEventListener("change", applyFilters);
   } catch (err) {
     ordersBody.innerHTML =
-      '<tr><td colspan="9">Erreur de chargement des commandes.</td></tr>';
+      '<tr><td colspan="10">Erreur de chargement des commandes.</td></tr>';
     console.error(err);
   }
 }
