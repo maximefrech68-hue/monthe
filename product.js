@@ -76,7 +76,19 @@ function renderCart() {
   if (cartTotalEl) cartTotalEl.textContent = cartTotal().toFixed(2);
 }
 function changeQty(id, delta) {
-  const next = (cart[id] || 0) + delta;
+  const product = getProductById(id);
+  if (!product) return;
+
+  const stock = Number(product.stock || 0);
+  const currentQty = cart[id] || 0;
+  const next = currentQty + delta;
+
+  // Empêcher de dépasser le stock
+  if (delta > 0 && next > stock) {
+    alert(`Stock insuffisant. Seulement ${stock} unité(s) disponible(s).`);
+    return;
+  }
+
   if (next <= 0) delete cart[id];
   else cart[id] = next;
   saveCart();
@@ -89,10 +101,23 @@ function removeFromCart(id) {
   updateCartBadge();
   renderCart();
 }
-function addToCart(id) {
-  cart[id] = (cart[id] || 0) + 1;
+function addToCart(id, showAlert = true) {
+  const product = getProductById(id);
+  if (!product) return false;
+
+  const stock = Number(product.stock || 0);
+  const currentQty = cart[id] || 0;
+
+  // Vérifier si l'ajout dépasserait le stock disponible
+  if (currentQty >= stock) {
+    if (showAlert) alert(`Stock insuffisant. Seulement ${stock} unité(s) disponible(s).`);
+    return false;
+  }
+
+  cart[id] = currentQty + 1;
   saveCart();
   updateCartBadge();
+  return true;
 }
 
 openCartBtn?.addEventListener("click", () => {
@@ -131,13 +156,22 @@ function getIdFromUrl() {
 function renderProduct(p) {
   document.title = `${p.name} – MonThé`;
 
+  // Déterminer le statut du stock
+  const stock = Number(p.stock || 0);
+  const isInStock = stock >= 5;
+  const stockBadgeClass = isInStock ? "stock-badge stock-available" : "stock-badge stock-unavailable";
+  const stockBadgeText = isInStock ? `${stock} unité(s) disponible(s)` : "Indisponible";
+
   productEl.innerHTML = `
     <img src="${p.image_url}" alt="${p.name}" referrerpolicy="no-referrer">
     <div>
       <h2>${p.name}</h2>
-      <div class="price" style="font-size:18px;">${Number(
-        p.price_eur || 0
-      ).toFixed(2)} €</div>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 0;">
+        <div class="price" style="font-size:18px; margin: 0;">${Number(
+          p.price_eur || 0
+        ).toFixed(2)} €</div>
+        <span class="${stockBadgeClass}">${stockBadgeText}</span>
+      </div>
 
       <div class="kv">
         <b>Catégorie</b><div>${p.category || "-"}</div>
@@ -149,14 +183,38 @@ function renderProduct(p) {
 
       <p>${p.description || ""}</p>
 
-      <button id="addToCart" class="primary-btn">Ajouter au panier</button>
+      <button id="addToCart" class="primary-btn ${!isInStock ? 'btn-disabled' : ''}" ${!isInStock ? 'disabled' : ''}>
+        ${isInStock ? 'Ajouter au panier' : 'Indisponible'}
+      </button>
     </div>
   `;
 
-  productEl.querySelector("#addToCart").addEventListener("click", () => {
-    addToCart(p.id);
-    alert("Ajouté au panier ✅");
+  const addBtn = productEl.querySelector("#addToCart");
+  addBtn.addEventListener("click", () => {
+    if (addToCart(p.id)) {
+      alert("Ajouté au panier ✅");
+      // Mettre à jour le bouton si nécessaire
+      updateAddToCartButton(p);
+    }
   });
+}
+
+function updateAddToCartButton(p) {
+  const stock = Number(p.stock || 0);
+  const currentQty = cart[p.id] || 0;
+  const addBtn = productEl.querySelector("#addToCart");
+
+  if (!addBtn) return;
+
+  if (currentQty >= stock) {
+    addBtn.classList.add("btn-disabled");
+    addBtn.disabled = true;
+    addBtn.textContent = "Stock épuisé";
+  } else if (stock < 5) {
+    addBtn.classList.add("btn-disabled");
+    addBtn.disabled = true;
+    addBtn.textContent = "Indisponible";
+  }
 }
 
 async function init() {

@@ -132,7 +132,19 @@ function renderCartModal() {
 }
 
 function changeQty(id, delta) {
-  const next = (cart[id] || 0) + delta;
+  const product = getProductById(id);
+  if (!product) return;
+
+  const stock = Number(product.stock || 0);
+  const currentQty = cart[id] || 0;
+  const next = currentQty + delta;
+
+  // Empêcher de dépasser le stock
+  if (delta > 0 && next > stock) {
+    alert(`Stock insuffisant. Seulement ${stock} unité(s) disponible(s).`);
+    return;
+  }
+
   if (next <= 0) delete cart[id];
   else cart[id] = next;
 

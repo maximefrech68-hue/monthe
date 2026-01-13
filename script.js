@@ -57,13 +57,38 @@ function updateCartBadge() {
 }
 
 function addToCart(id) {
-  cart[id] = (cart[id] || 0) + 1;
+  const product = getProductById(id);
+  if (!product) return false;
+
+  const stock = Number(product.stock || 0);
+  const currentQty = cart[id] || 0;
+
+  // Vérifier si l'ajout dépasserait le stock disponible
+  if (currentQty >= stock) {
+    alert(`Stock insuffisant. Seulement ${stock} unité(s) disponible(s).`);
+    return false;
+  }
+
+  cart[id] = currentQty + 1;
   saveCart();
   updateCartBadge();
+  return true;
 }
 
 function changeQty(id, delta) {
-  const next = (cart[id] || 0) + delta;
+  const product = getProductById(id);
+  if (!product) return;
+
+  const stock = Number(product.stock || 0);
+  const currentQty = cart[id] || 0;
+  const next = currentQty + delta;
+
+  // Empêcher de dépasser le stock
+  if (delta > 0 && next > stock) {
+    alert(`Stock insuffisant. Seulement ${stock} unité(s) disponible(s).`);
+    return;
+  }
+
   if (next <= 0) {
     delete cart[id];
   } else {
