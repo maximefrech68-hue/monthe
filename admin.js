@@ -1,7 +1,17 @@
 // Configuration
-const ADMIN_PASSWORD = "Pdjs895(!s$";
+// Hash SHA-256 du mot de passe (le mot de passe n'est plus en clair dans le code !)
+const ADMIN_PASSWORD_HASH = "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+
+// Fonction de hashage SHA-256
+async function hashPassword(password) {
+  const msgBuffer = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
 
 // Éléments DOM
 const loginScreen = document.getElementById("loginScreen");
@@ -46,11 +56,14 @@ function showError(message) {
 }
 
 // Gestion de la connexion
-loginForm.addEventListener("submit", (e) => {
+loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const password = document.getElementById("password").value;
 
-  if (password === ADMIN_PASSWORD) {
+  // Hasher le mot de passe entré et comparer avec le hash stocké
+  const passwordHash = await hashPassword(password);
+
+  if (passwordHash === ADMIN_PASSWORD_HASH) {
     sessionStorage.setItem("adminAuth", "true");
     showAdminPanel();
     loginForm.reset();
