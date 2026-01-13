@@ -2,7 +2,7 @@ let allProducts = [];
 let cart = loadCart();
 
 const GOOGLE_APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxpzkcwbH2a9ZtOBlcaaXMJmQNkD3ZRmcG2K6_0Pnw7M3PET2BasT3enWo4JZpoa3vl/exec";
+  "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
 
 // IMPORTANT : ton domaine Netlify (prod)
 const SITE_URL = "https://zippy-hamster-4154f1.netlify.app";
@@ -347,7 +347,8 @@ async function handleStripeReturn() {
 
       // Décrémenter le stock des produits commandés
       try {
-        await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        console.log("Décrémentation du stock pour les items:", pending.items);
+        const stockRes = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: "POST",
           mode: "cors",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -356,9 +357,15 @@ async function handleStripeReturn() {
             items: pending.items,
           }),
         });
-        console.log("Stock décrémenté avec succès");
+        const stockData = await safeJson(stockRes);
+        console.log("Réponse décrémentation stock:", stockData);
+        if (stockData.ok) {
+          console.log("✅ Stock décrémenté avec succès:", stockData.data);
+        } else {
+          console.error("❌ Erreur décrémentation stock:", stockData.error);
+        }
       } catch (stockErr) {
-        console.error("Erreur décrémentation stock:", stockErr);
+        console.error("❌ Exception décrémentation stock:", stockErr);
         // Ne pas bloquer la confirmation même si le stock n'a pas pu être mis à jour
       }
 
