@@ -28,14 +28,15 @@
         <section class="checkout-card">
           <h2>Informations</h2>
 
-          <form id="checkoutForm" class="form">
+          <form id="checkoutForm" class="form" autocomplete="off">
             <label>
               Nom complet
               <input
                 id="fullName"
                 type="text"
                 required
-                placeholder="Maxime Frech"
+                placeholder="Sophie Martin"
+                autocomplete="off"
               />
             </label>
 
@@ -45,23 +46,24 @@
                 id="email"
                 type="email"
                 required
-                placeholder="maxime@email.com"
+                placeholder="sophie.martin@example.com"
+                autocomplete="off"
               />
             </label>
 
             <label>
               Adresse
-              <input id="address" type="text" required placeholder="12 rue …" />
+              <input id="address" type="text" required placeholder="15 avenue des Tilleuls" autocomplete="off" />
             </label>
 
             <label>
               Ville
-              <input id="city" type="text" required placeholder="Mulhouse" />
+              <input id="city" type="text" required placeholder="Lyon" autocomplete="off" />
             </label>
 
             <label>
               Code postal
-              <input id="zip" type="text" required placeholder="68100" />
+              <input id="zip" type="text" required placeholder="69003" autocomplete="off" />
             </label>
 
             <button class="primary-btn" type="submit">
