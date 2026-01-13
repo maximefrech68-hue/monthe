@@ -187,10 +187,25 @@ function renderOrders(orders) {
   orders.forEach((o) => {
     const row = document.createElement("tr");
 
-    // Formater la date
-    const dateStr = o.date
-      ? new Date(o.date).toLocaleDateString("fr-FR")
-      : "-";
+    // Formater la date avec heure
+    let dateStr = "-";
+    if (o.date && o.date.trim() !== "") {
+      try {
+        const date = new Date(o.date);
+        // Vérifier si la date est valide
+        if (!isNaN(date.getTime())) {
+          dateStr = date.toLocaleString("fr-FR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        }
+      } catch (e) {
+        console.error("Erreur parsing date:", o.date, e);
+      }
+    }
 
     // Badge statut
     const statusClass = o.status === "paid" ? "status-paid" : "status-pending";
@@ -446,6 +461,25 @@ function showOrderDetails(orderId) {
   const order = allOrders.find((o) => o.order_id === orderId);
   if (!order) return;
 
+  // Formater la date de façon sûre
+  let dateStr = "-";
+  if (order.date && order.date.trim() !== "") {
+    try {
+      const date = new Date(order.date);
+      if (!isNaN(date.getTime())) {
+        dateStr = date.toLocaleString("fr-FR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+    } catch (e) {
+      console.error("Erreur parsing date dans détails:", order.date, e);
+    }
+  }
+
   const itemsHtml = order.items
     .map(
       (item) => `
@@ -461,7 +495,7 @@ function showOrderDetails(orderId) {
 
   const detailsHtml = `
     <h2>Commande ${order.order_id}</h2>
-    <p><strong>Date :</strong> ${new Date(order.date).toLocaleString("fr-FR")}</p>
+    <p><strong>Date :</strong> ${dateStr}</p>
     <p><strong>Client :</strong> ${order.full_name}</p>
     <p><strong>Email :</strong> ${order.email}</p>
     <p><strong>Adresse :</strong> ${order.address}, ${order.zip} ${order.city}</p>
@@ -560,9 +594,28 @@ exportBtn.addEventListener("click", () => {
 
   // Créer les lignes de données
   const rows = allOrders.map((o) => {
+    // Formater la date de façon sûre
+    let dateFormatted = "";
+    if (o.date && o.date.trim() !== "") {
+      try {
+        const date = new Date(o.date);
+        if (!isNaN(date.getTime())) {
+          dateFormatted = date.toLocaleString("fr-FR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        }
+      } catch (e) {
+        console.error("Erreur parsing date pour CSV:", o.date, e);
+      }
+    }
+
     return [
       escapeCSVCell(o.order_id || ""),
-      escapeCSVCell(o.date ? new Date(o.date).toLocaleString("fr-FR") : ""),
+      escapeCSVCell(dateFormatted),
       escapeCSVCell(o.full_name || ""),
       escapeCSVCell(o.email || ""),
       escapeCSVCell(o.address || ""),
