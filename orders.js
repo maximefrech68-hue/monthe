@@ -1,5 +1,6 @@
 // Configuration
-const ADMIN_PASSWORD = "Pdjs895(!s$";
+// Note: Le mot de passe est maintenant stocké côté serveur (Google Apps Script)
+// Plus aucun mot de passe en clair dans le code client !
 const ORDERS_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=Orders";
 const APPS_SCRIPT_URL =
@@ -155,7 +156,7 @@ function showError(message) {
 }
 
 // Gestion de la connexion
-loginForm.addEventListener("submit", (e) => {
+loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   // Vérifier si bloqué
@@ -167,27 +168,46 @@ loginForm.addEventListener("submit", (e) => {
 
   const password = document.getElementById("password").value;
 
-  if (password === ADMIN_PASSWORD) {
-    // Connexion réussie - réinitialiser les tentatives
-    resetLoginAttempts();
-    if (lockoutTimer) clearTimeout(lockoutTimer);
-    sessionStorage.setItem("adminAuth", "true");
-    showOrdersPanel();
-    loginForm.reset();
-  } else {
-    // Échec - incrémenter les tentatives
-    const newBlockedUntil = incrementFailedAttempts();
+  try {
+    // Appeler le serveur pour vérifier le mot de passe
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "authenticate",
+        password: password,
+      }),
+    });
 
-    if (newBlockedUntil) {
-      // Bloqué après 3 tentatives
-      disableLoginForm();
-      updateLockoutMessage(newBlockedUntil);
+    const result = await response.json();
+
+    if (result.ok) {
+      // Connexion réussie - réinitialiser les tentatives
+      resetLoginAttempts();
+      if (lockoutTimer) clearTimeout(lockoutTimer);
+      sessionStorage.setItem("adminAuth", "true");
+      sessionStorage.setItem("adminToken", result.token || "");
+      showOrdersPanel();
+      loginForm.reset();
     } else {
-      // Pas encore bloqué
-      const attempts = getLoginAttempts();
-      const remaining = MAX_ATTEMPTS - attempts.count;
-      showError(`Mot de passe incorrect. ${remaining} tentative(s) restante(s).`);
+      // Échec - incrémenter les tentatives
+      const newBlockedUntil = incrementFailedAttempts();
+
+      if (newBlockedUntil) {
+        // Bloqué après 3 tentatives
+        disableLoginForm();
+        updateLockoutMessage(newBlockedUntil);
+      } else {
+        // Pas encore bloqué
+        const attempts = getLoginAttempts();
+        const remaining = MAX_ATTEMPTS - attempts.count;
+        showError(`Mot de passe incorrect. ${remaining} tentative(s) restante(s).`);
+      }
     }
+  } catch (error) {
+    console.error("Erreur d'authentification:", error);
+    showError("Erreur de connexion au serveur. Réessayez.");
   }
 });
 
