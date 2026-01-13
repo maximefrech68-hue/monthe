@@ -169,11 +169,20 @@ function renderProducts(products) {
     const card = document.createElement("div");
     card.className = "product";
 
+    // Déterminer le statut du stock
+    const stock = Number(p.stock || 0);
+    const isInStock = stock >= 5;
+    const stockBadgeClass = isInStock ? "stock-badge stock-available" : "stock-badge stock-unavailable";
+    const stockBadgeText = isInStock ? "En stock" : "Indisponible";
+
     card.innerHTML = `
       <img src="${p.image_url}" alt="${p.name}" referrerpolicy="no-referrer">
       <h3>${p.name}</h3>
       <p>${p.short_desc ?? ""}</p>
-      <p class="price">${Number(p.price_eur || 0).toFixed(2)} €</p>
+      <div class="price-stock-container">
+        <p class="price">${Number(p.price_eur || 0).toFixed(2)} €</p>
+        <span class="${stockBadgeClass}">${stockBadgeText}</span>
+      </div>
       <button class="primary-btn" data-add="${p.id}">Ajouter au panier</button>
     `;
     card.style.cursor = "pointer";
