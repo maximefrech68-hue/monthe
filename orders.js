@@ -105,6 +105,8 @@ async function fetchOrdersFromSheet() {
 
       // Conversions
       o.total_eur = Number(o.total_eur || 0);
+
+      // Garder la date brute pour debug
       o.date = o.date || "";
 
       // Parser items_json
@@ -116,6 +118,16 @@ async function fetchOrdersFromSheet() {
 
       return o;
     });
+
+    // Debug: afficher quelques dates brutes
+    if (orders.length > 0) {
+      console.log("=== DEBUG DATES ===");
+      console.log("Première commande - date brute:", orders[0].date);
+      console.log("Type:", typeof orders[0].date);
+      if (orders.length > 1) {
+        console.log("Deuxième commande - date brute:", orders[1].date);
+      }
+    }
 
     // Trier par date décroissante (plus récent en premier)
     orders.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -167,6 +179,42 @@ function normalize(s) {
   return (s ?? "").toString().toLowerCase().trim();
 }
 
+// Fonction helper pour formater une date de façon robuste
+function formatOrderDate(dateStr) {
+  if (!dateStr || dateStr.trim() === "") {
+    return "-";
+  }
+
+  try {
+    // Essayer de parser la date
+    let date = new Date(dateStr);
+
+    // Si la date n'est pas valide, essayer avec un format ISO
+    if (isNaN(date.getTime())) {
+      // Essayer en remplaçant les espaces par T pour format ISO
+      const isoFormat = dateStr.replace(" ", "T");
+      date = new Date(isoFormat);
+    }
+
+    // Vérifier si la date est maintenant valide
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleString("fr-FR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } else {
+      console.warn("Date invalide après parsing:", dateStr);
+      return dateStr; // Retourner la date brute si on ne peut pas la parser
+    }
+  } catch (e) {
+    console.error("Erreur parsing date:", dateStr, e);
+    return dateStr; // Retourner la date brute en cas d'erreur
+  }
+}
+
 // Rendu des commandes en tableau
 function renderOrders(orders) {
   ordersBody.innerHTML = "";
@@ -188,24 +236,7 @@ function renderOrders(orders) {
     const row = document.createElement("tr");
 
     // Formater la date avec heure
-    let dateStr = "-";
-    if (o.date && o.date.trim() !== "") {
-      try {
-        const date = new Date(o.date);
-        // Vérifier si la date est valide
-        if (!isNaN(date.getTime())) {
-          dateStr = date.toLocaleString("fr-FR", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-        }
-      } catch (e) {
-        console.error("Erreur parsing date:", o.date, e);
-      }
-    }
+    const dateStr = formatOrderDate(o.date);
 
     // Badge statut
     const statusClass = o.status === "paid" ? "status-paid" : "status-pending";
@@ -461,24 +492,8 @@ function showOrderDetails(orderId) {
   const order = allOrders.find((o) => o.order_id === orderId);
   if (!order) return;
 
-  // Formater la date de façon sûre
-  let dateStr = "-";
-  if (order.date && order.date.trim() !== "") {
-    try {
-      const date = new Date(order.date);
-      if (!isNaN(date.getTime())) {
-        dateStr = date.toLocaleString("fr-FR", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      }
-    } catch (e) {
-      console.error("Erreur parsing date dans détails:", order.date, e);
-    }
-  }
+  // Formater la date avec la fonction helper
+  const dateStr = formatOrderDate(order.date);
 
   const itemsHtml = order.items
     .map(
@@ -594,28 +609,9 @@ exportBtn.addEventListener("click", () => {
 
   // Créer les lignes de données
   const rows = allOrders.map((o) => {
-    // Formater la date de façon sûre
-    let dateFormatted = "";
-    if (o.date && o.date.trim() !== "") {
-      try {
-        const date = new Date(o.date);
-        if (!isNaN(date.getTime())) {
-          dateFormatted = date.toLocaleString("fr-FR", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-        }
-      } catch (e) {
-        console.error("Erreur parsing date pour CSV:", o.date, e);
-      }
-    }
-
     return [
       escapeCSVCell(o.order_id || ""),
-      escapeCSVCell(dateFormatted),
+      escapeCSVCell(formatOrderDate(o.date)),
       escapeCSVCell(o.full_name || ""),
       escapeCSVCell(o.email || ""),
       escapeCSVCell(o.address || ""),
