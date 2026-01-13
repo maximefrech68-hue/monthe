@@ -186,7 +186,29 @@ function formatOrderDate(dateStr) {
   }
 
   try {
-    // Essayer de parser la date
+    // Format français : JJ/MM/AAAA HH:MM:SS
+    // Regex pour capturer les parties de la date
+    const frenchDateRegex = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
+    const match = dateStr.match(frenchDateRegex);
+
+    if (match) {
+      // Parser le format français
+      const [, day, month, year, hour, minute, second] = match;
+      // Créer la date (mois - 1 car les mois commencent à 0 en JavaScript)
+      const date = new Date(year, month - 1, day, hour, minute, second);
+
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleString("fr-FR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+    }
+
+    // Si pas de match avec le format français, essayer le parsing standard
     let date = new Date(dateStr);
 
     // Si la date n'est pas valide, essayer avec un format ISO
