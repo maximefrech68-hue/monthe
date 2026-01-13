@@ -380,7 +380,7 @@ function renderOrders(orders) {
 
   if (orders.length === 0) {
     ordersBody.innerHTML =
-      '<tr><td colspan="9" style="text-align: center; padding: 2rem;">Aucune commande trouvée.</td></tr>';
+      '<tr><td colspan="10" style="text-align: center; padding: 2rem;">Aucune commande trouvée.</td></tr>';
     selectAllCheckbox.checked = false;
     return;
   }
@@ -395,6 +395,11 @@ function renderOrders(orders) {
     const statusClass = o.status === "paid" ? "status-paid" : "status-pending";
     const statusText = o.status === "paid" ? "Payée" : "En attente";
 
+    // Extraire les noms des produits
+    const productNames = o.items && o.items.length > 0
+      ? o.items.map(item => `${item.name} (×${item.qty})`).join(", ")
+      : "-";
+
     row.innerHTML = `
       <td><input type="checkbox" class="order-checkbox" data-id="${o.order_id}" /></td>
       <td><strong>${o.order_id}</strong></td>
@@ -402,6 +407,7 @@ function renderOrders(orders) {
       <td>${o.full_name}</td>
       <td>${o.email}</td>
       <td>${o.city} ${o.zip}</td>
+      <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productNames}">${productNames}</td>
       <td><strong>${o.total_eur.toFixed(2)} €</strong></td>
       <td><span class="status-badge ${statusClass}">${statusText}</span></td>
       <td>
