@@ -17,7 +17,7 @@ header {
   grid-template-columns: repeat(auto-fill, minmax(250px, 300px));
   gap: 1.5rem;
   padding: 2rem;
-  justify-content: start;
+  justify-content: center;
 }
 
 .product {
