@@ -40,6 +40,10 @@ function doPost(e) {
       return updateProductStock(data.product_id, data.stock);
     } else if (action === "decrementStock") {
       return decrementProductStock(data.items);
+    } else if (action === "changePassword") {
+      return changePasswordHash(data.oldPasswordHash, data.newPasswordHash);
+    } else if (action === "getPasswordHash") {
+      return getPasswordHash();
     } else if (data.order_id || data.order_ref || data.email) {
       // Si pas d'action mais qu'on a des infos de commande, c'est une commande
       return handleOrder(data);
@@ -587,6 +591,83 @@ function uploadImageToDrive(fileName, mimeType, base64Data) {
     });
   } catch (error) {
     Logger.log("Erreur uploadImageToDrive: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/* ==================== CHANGEMENT DE MOT DE PASSE ==================== */
+
+function changePasswordHash(oldPasswordHash, newPasswordHash) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName("Settings");
+
+    // Créer la feuille Settings si elle n'existe pas
+    if (!sheet) {
+      sheet = ss.insertSheet("Settings");
+      sheet.appendRow(["key", "value"]);
+      Logger.log("Feuille Settings créée");
+    }
+
+    // Chercher si une entrée password_hash existe déjà
+    const data = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === "password_hash") {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      // Pas d'entrée existante, ajouter une nouvelle ligne
+      sheet.appendRow(["password_hash", newPasswordHash]);
+      Logger.log("Nouveau hash de mot de passe ajouté");
+    } else {
+      // Mettre à jour l'entrée existante
+      sheet.getRange(rowIndex, 2).setValue(newPasswordHash);
+      Logger.log("Hash de mot de passe mis à jour");
+    }
+
+    return createResponse(true, "Mot de passe changé avec succès", {
+      newHash: newPasswordHash,
+    });
+  } catch (error) {
+    Logger.log("Erreur changePasswordHash: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+function getPasswordHash() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("Settings");
+
+    // Si la feuille n'existe pas, retourner null
+    if (!sheet) {
+      return createResponse(true, "Aucun hash personnalisé trouvé", {
+        hash: null,
+      });
+    }
+
+    // Chercher l'entrée password_hash
+    const data = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === "password_hash") {
+        return createResponse(true, "Hash trouvé", {
+          hash: data[i][1],
+        });
+      }
+    }
+
+    // Pas d'entrée trouvée
+    return createResponse(true, "Aucun hash personnalisé trouvé", {
+      hash: null,
+    });
+  } catch (error) {
+    Logger.log("Erreur getPasswordHash: " + error);
     return createResponse(false, error.toString());
   }
 }
