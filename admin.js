@@ -356,10 +356,14 @@ async function fetchAllProducts() {
     if (!res.ok) throw new Error("Erreur chargement Google Sheet");
 
     const csv = await res.text();
-    const lines = csv
-      .split("\n")
-      .map((l) => l.replace(/\r/g, ""))
-      .filter((l) => l.trim() !== "");
+
+    // Utiliser le nouveau parser qui gère les retours à la ligne dans les guillemets
+    const lines = parseCSVToLines(csv);
+
+    if (lines.length === 0) {
+      console.warn("Aucune ligne trouvée dans le CSV");
+      return [];
+    }
 
     const sep = ",";
     const headers = parseCSVLine(lines[0], sep);
@@ -378,7 +382,13 @@ async function fetchAllProducts() {
       return p;
     });
 
-    return products;
+    // ✅ Filtrer les produits invalides (sans ID ou avec ID vide)
+    const validProducts = products.filter((p) => p.id && p.id.trim() !== "");
+
+    console.log("Admin - Produits totaux:", products.length);
+    console.log("Admin - Produits valides:", validProducts.length);
+
+    return validProducts;
   } catch (error) {
     console.error("Erreur:", error);
     return [];
@@ -386,6 +396,64 @@ async function fetchAllProducts() {
 }
 
 // Fonctions de parsing CSV (copiées de products.js)
+/**
+ * Parse le CSV complet en gérant les retours à la ligne dans les champs entre guillemets.
+ * Retourne un tableau de lignes (chaque ligne = string complète).
+ */
+function parseCSVToLines(csv) {
+  const lines = [];
+  let currentLine = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < csv.length; i++) {
+    const ch = csv[i];
+    const nextCh = csv[i + 1];
+
+    // Gérer les guillemets
+    if (ch === '"') {
+      // Double guillemet "" = guillemet échappé
+      if (inQuotes && nextCh === '"') {
+        currentLine += '""';
+        i++; // Sauter le prochain guillemet
+        continue;
+      }
+      // Sinon, toggle l'état inQuotes
+      inQuotes = !inQuotes;
+      currentLine += ch;
+      continue;
+    }
+
+    // Gérer les retours à la ligne
+    if (ch === '\n' || ch === '\r') {
+      if (!inQuotes) {
+        // Fin de ligne réelle (hors guillemets)
+        if (currentLine.trim() !== "") {
+          lines.push(currentLine);
+          currentLine = "";
+        }
+        // Ignorer \r\n (Windows) en sautant le \n après \r
+        if (ch === '\r' && nextCh === '\n') {
+          i++;
+        }
+      } else {
+        // On est dans des guillemets, conserver le retour à la ligne
+        currentLine += ch;
+      }
+      continue;
+    }
+
+    // Caractère normal
+    currentLine += ch;
+  }
+
+  // Ajouter la dernière ligne si elle n'est pas vide
+  if (currentLine.trim() !== "") {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
 function parseCSVLine(line, sep = ",") {
   const out = [];
   let cur = "";
