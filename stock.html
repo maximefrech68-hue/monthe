@@ -186,6 +186,51 @@
         background: #9c27b0;
         color: white;
       }
+
+      /* Responsive mobile */
+      @media (max-width: 768px) {
+        body {
+          margin: 0;
+          padding: 0;
+        }
+
+        .topbar {
+          width: 100%;
+          margin: 0;
+          padding: 12px;
+          box-sizing: border-box;
+          gap: 8px;
+        }
+
+        header {
+          padding: 1.5rem 1rem;
+        }
+
+        header h1 {
+          font-size: 1.5rem;
+        }
+
+        .toolbar {
+          padding: 1rem;
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .toolbar input,
+        .toolbar select {
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .stock-container {
+          padding: 1rem;
+          overflow-x: auto;
+        }
+
+        .stock-table {
+          min-width: 700px;
+        }
+      }
     </style>
   </head>
   <body>
