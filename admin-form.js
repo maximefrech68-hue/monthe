@@ -408,6 +408,30 @@ productForm.addEventListener("submit", async (e) => {
 // Vérifier l'authentification au chargement
 checkAuth();
 
+// Bloquer les sauts de ligne (Enter) dans les champs description et ingredients
+const descriptionField = document.getElementById("description");
+const ingredientsField = document.getElementById("ingredients");
+
+if (descriptionField) {
+  descriptionField.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // Optionnel : afficher un message à l'utilisateur
+      // console.log("Les retours à la ligne ne sont pas autorisés dans ce champ");
+    }
+  });
+}
+
+if (ingredientsField) {
+  ingredientsField.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // Optionnel : afficher un message à l'utilisateur
+      // console.log("Les retours à la ligne ne sont pas autorisés dans ce champ");
+    }
+  });
+}
+
 // Vérifier si on est en mode édition
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get("id");
