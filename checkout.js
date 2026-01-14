@@ -393,6 +393,9 @@ async function handleStripeReturn() {
 
       form?.closest(".checkout-card")?.classList.add("hidden");
       confirmation?.classList.remove("hidden");
+
+      // Masquer la topbar pour éviter les boutons redondants
+      document.querySelector(".topbar")?.classList.add("hidden");
     } catch (err) {
       alert(
         "Paiement OK, mais erreur d'enregistrement commande : " + err.message
