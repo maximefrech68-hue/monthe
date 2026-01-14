@@ -278,32 +278,82 @@
 
         .toolbar {
           padding: 1rem;
-          flex-direction: column;
-          align-items: stretch;
+          gap: 8px;
         }
 
-        .toolbar input,
+        .toolbar input {
+          flex: 1;
+          min-width: 0;
+        }
+
         .toolbar select,
         .toolbar button {
-          width: 100%;
-          box-sizing: border-box;
+          font-size: 11px;
+          padding: 8px 10px;
+          white-space: nowrap;
         }
 
         .orders-container {
-          padding: 1rem;
+          padding: 0;
           overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
         }
 
         .orders-table {
-          min-width: 800px;
+          font-size: 12px;
+        }
+
+        .orders-table th,
+        .orders-table td {
+          padding: 8px 6px;
+          font-size: 11px;
+        }
+
+        .orders-table th:first-child,
+        .orders-table td:first-child {
+          position: sticky;
+          left: 0;
+          background: white;
+          z-index: 1;
+        }
+
+        .orders-table th:first-child {
+          background: #a0826d;
         }
 
         .select-btn,
         .delete-selected-btn,
         .export-btn {
-          font-size: 12px;
-          padding: 8px 12px;
+          font-size: 11px;
+          padding: 8px 10px;
           white-space: nowrap;
+        }
+
+        .btn-details,
+        .btn-delete {
+          font-size: 11px;
+          padding: 4px 8px;
+        }
+
+        .status-badge {
+          font-size: 10px;
+          padding: 2px 6px;
+        }
+
+        .column-filter {
+          font-size: 10px;
+          padding: 2px 4px;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .toolbar button {
+          font-size: 10px;
+          padding: 6px 8px;
+        }
+
+        .toolbar {
+          padding: 0.5rem;
         }
       }
     </style>
