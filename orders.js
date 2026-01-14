@@ -287,6 +287,10 @@ async function fetchOrdersFromSheet() {
       console.log("=== DEBUG DATES ===");
       console.log("Première commande - date brute:", orders[0].date);
       console.log("Type:", typeof orders[0].date);
+      const testDate = new Date(orders[0].date);
+      console.log("Date parsée:", testDate);
+      console.log("Date parsée ISO:", testDate.toISOString());
+      console.log("Date parsée locale:", testDate.toLocaleString('fr-FR'));
       if (orders.length > 1) {
         console.log("Deuxième commande - date brute:", orders[1].date);
       }
@@ -481,18 +485,57 @@ function applyFilters() {
   // Filtre date
   if (dateFilter && dateFilter !== "all") {
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Créer today en utilisant setHours pour mettre à minuit dans le fuseau horaire local
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
 
     filtered = filtered.filter((o) => {
       if (!o.date) return false;
-      const orderDate = new Date(o.date);
+
+      // Parser la date de manière robuste
+      let orderDate;
+      try {
+        // Format français : JJ/MM/AAAA HH:MM:SS
+        const frenchDateRegex = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
+        const match = o.date.match(frenchDateRegex);
+
+        if (match) {
+          const [, day, month, year, hour, minute, second] = match;
+          orderDate = new Date(year, month - 1, day, hour, minute, second);
+        } else {
+          // Essayer le parsing standard
+          orderDate = new Date(o.date);
+        }
+      } catch (e) {
+        orderDate = new Date(o.date);
+      }
+
+      // Vérifier que la date est valide
+      if (isNaN(orderDate.getTime())) {
+        console.warn('Date invalide:', o.date);
+        return false;
+      }
 
       if (dateFilter === "today") {
-        const orderDay = new Date(
-          orderDate.getFullYear(),
-          orderDate.getMonth(),
-          orderDate.getDate()
-        );
+        // Créer une date pour le jour de la commande à minuit dans le même fuseau horaire
+        const orderDay = new Date(orderDate);
+        orderDay.setHours(0, 0, 0, 0);
+
+        // Debug pour la première commande
+        if (filtered.indexOf(o) === 0) {
+          console.log("=== DEBUG FILTRE TODAY ===");
+          console.log("Date brute commande:", o.date);
+          console.log("orderDate:", orderDate);
+          console.log("orderDate ISO:", orderDate.toISOString());
+          console.log("orderDay (sans heure):", orderDay);
+          console.log("orderDay ISO:", orderDay.toISOString());
+          console.log("today (sans heure):", today);
+          console.log("today ISO:", today.toISOString());
+          console.log("orderDay timestamp:", orderDay.getTime());
+          console.log("today timestamp:", today.getTime());
+          console.log("Égaux?", orderDay.getTime() === today.getTime());
+        }
+
         return orderDay.getTime() === today.getTime();
       } else if (dateFilter === "week") {
         const weekAgo = new Date(today);
