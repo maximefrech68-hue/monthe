@@ -14,9 +14,10 @@ header {
 
 .products {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 300px));
   gap: 1.5rem;
   padding: 2rem;
+  justify-content: start;
 }
 
 .product {
