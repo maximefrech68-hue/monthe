@@ -7,9 +7,14 @@ const OWNER_EMAIL = "maxime.frech.68@gmail.com";
 const SHOP_NAME = "MonThé";
 
 /**
- * Fonction GET - pour tester que le web app fonctionne
+ * Fonction GET - pour tester que le web app fonctionne et récupérer le hash
  */
 function doGet(e) {
+  // Si on demande le hash du mot de passe
+  if (e && e.parameter && e.parameter.action === "getPasswordHash") {
+    return getPasswordHash();
+  }
+
   return ContentService.createTextOutput(
     "OK - Web App active ✅ (orders + emails + products)"
   ).setMimeType(ContentService.MimeType.TEXT);

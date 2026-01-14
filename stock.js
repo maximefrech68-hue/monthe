@@ -1,9 +1,39 @@
 // Configuration
-const ADMIN_PASSWORD = "Pdjs895(!s$";
+// Hash SHA-256 du mot de passe par défaut (fallback)
+const DEFAULT_PASSWORD_HASH = "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
 const PRODUCTS_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=Products";
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+
+// Hash actuel (sera récupéré depuis Google Sheets ou utilisera le défaut)
+let ADMIN_PASSWORD_HASH = DEFAULT_PASSWORD_HASH;
+
+// Fonction de hashage SHA-256
+async function hashPassword(password) {
+  const msgBuffer = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+// Fonction pour récupérer le hash depuis Google Sheets
+async function fetchPasswordHash() {
+  try {
+    const response = await fetch(`${APPS_SCRIPT_URL}?action=getPasswordHash`);
+    const data = await response.json();
+
+    if (data.success && data.hash) {
+      ADMIN_PASSWORD_HASH = data.hash;
+      console.log('Hash personnalisé chargé depuis Google Sheets');
+    } else {
+      console.log('Utilisation du hash par défaut');
+    }
+  } catch (error) {
+    console.warn('Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:', error);
+  }
+}
 
 // Éléments DOM
 const loginScreen = document.getElementById("loginScreen");
@@ -50,11 +80,14 @@ function showError(message) {
 }
 
 // Gestion de la connexion
-loginForm.addEventListener("submit", (e) => {
+loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const password = document.getElementById("password").value;
 
-  if (password === ADMIN_PASSWORD) {
+  // Hasher le mot de passe entré et comparer avec le hash stocké
+  const passwordHash = await hashPassword(password);
+
+  if (passwordHash === ADMIN_PASSWORD_HASH) {
     sessionStorage.setItem("adminAuth", "true");
     showStockPanel();
     loginForm.reset();
@@ -315,5 +348,8 @@ async function init() {
   }
 }
 
-// Vérifier l'auth au chargement
-checkAuth();
+// Initialiser: récupérer le hash puis vérifier l'auth
+(async function() {
+  await fetchPasswordHash();
+  checkAuth();
+})();

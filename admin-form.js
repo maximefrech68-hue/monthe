@@ -1,5 +1,4 @@
 // Configuration
-const ADMIN_PASSWORD = "Pdjs895(!s$";
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
 

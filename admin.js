@@ -1,8 +1,11 @@
 // Configuration
-// Hash SHA-256 du mot de passe (le mot de passe n'est plus en clair dans le code !)
-const ADMIN_PASSWORD_HASH = "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
+// Hash SHA-256 du mot de passe par défaut (fallback)
+const DEFAULT_PASSWORD_HASH = "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+
+// Hash actuel (sera récupéré depuis Google Sheets ou utilisera le défaut)
+let ADMIN_PASSWORD_HASH = DEFAULT_PASSWORD_HASH;
 
 // Protection anti-brute-force
 const MAX_ATTEMPTS = 3;
@@ -15,6 +18,23 @@ async function hashPassword(password) {
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   return hashHex;
+}
+
+// Fonction pour récupérer le hash depuis Google Sheets
+async function fetchPasswordHash() {
+  try {
+    const response = await fetch(`${APPS_SCRIPT_URL}?action=getPasswordHash`);
+    const data = await response.json();
+
+    if (data.success && data.hash) {
+      ADMIN_PASSWORD_HASH = data.hash;
+      console.log('Hash personnalisé chargé depuis Google Sheets');
+    } else {
+      console.log('Utilisation du hash par défaut');
+    }
+  } catch (error) {
+    console.warn('Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:', error);
+  }
 }
 
 // Éléments DOM
@@ -413,5 +433,8 @@ async function init() {
   }
 }
 
-// Vérifier l'auth au chargement
-checkAuth();
+// Initialiser: récupérer le hash puis vérifier l'auth
+(async function() {
+  await fetchPasswordHash();
+  checkAuth();
+})();
