@@ -67,6 +67,7 @@ const statusFilterEl = document.getElementById("statusFilter");
 const exportBtn = document.getElementById("exportBtn");
 const selectAllBtn = document.getElementById("selectAllBtn");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
 const orderModal = document.getElementById("orderModal");
 const closeModal = document.querySelector(".close");
@@ -459,7 +460,7 @@ function renderOrders(orders) {
   selectAllCheckbox.checked = false;
 }
 
-// Filtrage des commandes
+// Filtrage des commandes avec mise à jour en cascade
 function applyFilters() {
   const q = normalize(searchEl?.value);
   const dateFilter = normalize(dateFilterEl?.value);
@@ -602,13 +603,50 @@ function applyFilters() {
     }
   }
 
+  // ✅ CASCADE: Mettre à jour les filtres en fonction des résultats filtrés
+  updateCascadeFilters(filtered);
+
   renderOrders(filtered);
 }
 
+// Mettre à jour les filtres en cascade (en gardant les valeurs sélectionnées)
+function updateCascadeFilters(filteredOrders) {
+  // Sauvegarder les valeurs actuellement sélectionnées
+  const currentClient = clientFilterEl?.value;
+  const currentEmail = emailFilterEl?.value;
+  const currentCity = cityFilterEl?.value;
+  const currentProduct = productFilterEl?.value;
+  const currentStatus = statusFilterEl?.value;
+
+  // Repopuler les filtres avec les valeurs disponibles dans filteredOrders
+  populateClientFilter(filteredOrders);
+  populateEmailFilter(filteredOrders);
+  populateCityFilter(filteredOrders);
+  populateProductFilter(filteredOrders);
+  populateStatusFilter(filteredOrders);
+
+  // Restaurer les valeurs sélectionnées si elles existent toujours
+  if (currentClient && Array.from(clientFilterEl.options).some(o => o.value === currentClient)) {
+    clientFilterEl.value = currentClient;
+  }
+  if (currentEmail && Array.from(emailFilterEl.options).some(o => o.value === currentEmail)) {
+    emailFilterEl.value = currentEmail;
+  }
+  if (currentCity && Array.from(cityFilterEl.options).some(o => o.value === currentCity)) {
+    cityFilterEl.value = currentCity;
+  }
+  if (currentProduct && Array.from(productFilterEl.options).some(o => o.value === currentProduct)) {
+    productFilterEl.value = currentProduct;
+  }
+  if (currentStatus && Array.from(statusFilterEl.options).some(o => o.value === currentStatus)) {
+    statusFilterEl.value = currentStatus;
+  }
+}
+
 // Peupler dynamiquement le filtre des clients
-function populateClientFilter() {
+function populateClientFilter(orders = allOrders) {
   const clients = new Set();
-  allOrders.forEach((o) => {
+  orders.forEach((o) => {
     if (o.full_name && o.full_name.trim() !== "") {
       clients.add(o.full_name.trim());
     }
@@ -630,9 +668,9 @@ function populateClientFilter() {
 }
 
 // Peupler dynamiquement le filtre des emails
-function populateEmailFilter() {
+function populateEmailFilter(orders = allOrders) {
   const emails = new Set();
-  allOrders.forEach((o) => {
+  orders.forEach((o) => {
     if (o.email && o.email.trim() !== "") {
       emails.add(o.email.trim());
     }
@@ -654,9 +692,9 @@ function populateEmailFilter() {
 }
 
 // Peupler dynamiquement le filtre des villes
-function populateCityFilter() {
+function populateCityFilter(orders = allOrders) {
   const cities = new Set();
-  allOrders.forEach((o) => {
+  orders.forEach((o) => {
     if (o.city && o.city.trim() !== "") {
       cities.add(o.city.trim());
     }
@@ -678,9 +716,9 @@ function populateCityFilter() {
 }
 
 // Peupler dynamiquement le filtre des produits
-function populateProductFilter() {
+function populateProductFilter(orders = allOrders) {
   const products = new Set();
-  allOrders.forEach((o) => {
+  orders.forEach((o) => {
     if (o.items && o.items.length > 0) {
       o.items.forEach((item) => {
         if (item.name && item.name.trim() !== "") {
@@ -706,11 +744,11 @@ function populateProductFilter() {
 }
 
 // Peupler dynamiquement le filtre des statuts
-function populateStatusFilter() {
+function populateStatusFilter(orders = allOrders) {
   const statuses = new Set();
   let hasEmptyStatus = false;
 
-  allOrders.forEach((o) => {
+  orders.forEach((o) => {
     if (o.status && o.status.trim() !== "") {
       statuses.add(o.status.trim());
     } else {
@@ -998,6 +1036,29 @@ deleteSelectedBtn?.addEventListener("click", async () => {
   location.reload();
 });
 
+// Réinitialiser tous les filtres
+function resetAllFilters() {
+  // Réinitialiser tous les filtres à "all"
+  if (searchEl) searchEl.value = "";
+  if (dateFilterEl) dateFilterEl.value = "all";
+  if (clientFilterEl) clientFilterEl.value = "all";
+  if (emailFilterEl) emailFilterEl.value = "all";
+  if (cityFilterEl) cityFilterEl.value = "all";
+  if (productFilterEl) productFilterEl.value = "all";
+  if (amountFilterEl) amountFilterEl.value = "all";
+  if (statusFilterEl) statusFilterEl.value = "all";
+
+  // Repopuler tous les filtres avec toutes les commandes
+  populateClientFilter(allOrders);
+  populateEmailFilter(allOrders);
+  populateCityFilter(allOrders);
+  populateProductFilter(allOrders);
+  populateStatusFilter(allOrders);
+
+  // Re-rendre toutes les commandes
+  renderOrders(allOrders);
+}
+
 // Initialisation
 async function init() {
   try {
@@ -1017,6 +1078,7 @@ async function init() {
     productFilterEl?.addEventListener("change", applyFilters);
     amountFilterEl?.addEventListener("change", applyFilters);
     statusFilterEl?.addEventListener("change", applyFilters);
+    resetFiltersBtn?.addEventListener("click", resetAllFilters);
   } catch (err) {
     ordersBody.innerHTML =
       '<tr><td colspan="10">Erreur de chargement des commandes.</td></tr>';
