@@ -3,64 +3,6 @@ const SHEET_CSV_URL =
   "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=Products";
 
 /**
- * Parse le CSV complet en gérant les retours à la ligne dans les champs entre guillemets.
- * Retourne un tableau de lignes (chaque ligne = string complète).
- */
-function parseCSVToLines(csv) {
-  const lines = [];
-  let currentLine = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < csv.length; i++) {
-    const ch = csv[i];
-    const nextCh = csv[i + 1];
-
-    // Gérer les guillemets
-    if (ch === '"') {
-      // Double guillemet "" = guillemet échappé
-      if (inQuotes && nextCh === '"') {
-        currentLine += '""';
-        i++; // Sauter le prochain guillemet
-        continue;
-      }
-      // Sinon, toggle l'état inQuotes
-      inQuotes = !inQuotes;
-      currentLine += ch;
-      continue;
-    }
-
-    // Gérer les retours à la ligne
-    if (ch === '\n' || ch === '\r') {
-      if (!inQuotes) {
-        // Fin de ligne réelle (hors guillemets)
-        if (currentLine.trim() !== "") {
-          lines.push(currentLine);
-          currentLine = "";
-        }
-        // Ignorer \r\n (Windows) en sautant le \n après \r
-        if (ch === '\r' && nextCh === '\n') {
-          i++;
-        }
-      } else {
-        // On est dans des guillemets, conserver le retour à la ligne
-        currentLine += ch;
-      }
-      continue;
-    }
-
-    // Caractère normal
-    currentLine += ch;
-  }
-
-  // Ajouter la dernière ligne si elle n'est pas vide
-  if (currentLine.trim() !== "") {
-    lines.push(currentLine);
-  }
-
-  return lines;
-}
-
-/**
  * Parse une ligne CSV en respectant les guillemets.
  * Supporte les virgules dans les champs ("rooibos, vanille").
  */
@@ -73,7 +15,7 @@ function parseCSVLine(line, sep = ",") {
     const ch = line[i];
 
     if (ch === '"') {
-      // "" dans un champ entre guillemets = un seul guillemet
+      // "" داخل نص مقتبس => يعني " واحد
       if (inQuotes && line[i + 1] === '"') {
         cur += '"';
         i++;
@@ -120,16 +62,13 @@ async function fetchProductsFromSheet() {
 
   const csv = await res.text();
 
-  // Utiliser le nouveau parser qui gère les retours à la ligne dans les guillemets
-  const lines = parseCSVToLines(csv);
+  const lines = csv
+    .split("\n")
+    .map((l) => l.replace(/\r/g, ""))
+    .filter((l) => l.trim() !== "");
 
   // Séparateur attendu pour out:csv = virgule
   const sep = ",";
-
-  if (lines.length === 0) {
-    console.warn("Aucune ligne trouvée dans le CSV");
-    return [];
-  }
 
   const headers = parseCSVLine(lines[0], sep);
 
@@ -157,18 +96,13 @@ async function fetchProductsFromSheet() {
     return p;
   });
 
-  // ✅ Filtrer les produits invalides (sans ID ou avec ID vide)
-  const validProducts = products.filter((p) => p.id && p.id.trim() !== "");
-
   // ✅ IMPORTANT : ici on choisit un filtrage STRICT
   // Seuls les TRUE s'affichent.
-  const visible = validProducts.filter((p) => p.active === true);
+  const visible = products.filter((p) => p.active === true);
 
   console.log("Headers détectés :", headers);
-  console.log("Produits totaux:", products.length);
-  console.log("Produits valides:", validProducts.length);
   console.table(
-    validProducts.map((p) => ({
+    products.map((p) => ({
       id: p.id,
       active_raw: p.active,
       active_type: typeof p.active,

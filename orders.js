@@ -252,14 +252,10 @@ async function fetchOrdersFromSheet() {
     if (!res.ok) throw new Error("Erreur chargement Google Sheet");
 
     const csv = await res.text();
-
-    // Utiliser le nouveau parser qui gère les retours à la ligne dans les guillemets
-    const lines = parseCSVToLines(csv);
-
-    if (lines.length === 0) {
-      console.warn("Aucune ligne trouvée dans le CSV des commandes");
-      return [];
-    }
+    const lines = csv
+      .split("\n")
+      .map((l) => l.replace(/\r/g, ""))
+      .filter((l) => l.trim() !== "");
 
     const sep = ",";
     const headers = parseCSVLine(lines[0], sep);
@@ -312,64 +308,6 @@ async function fetchOrdersFromSheet() {
 }
 
 // Fonctions de parsing CSV (copiées de admin.js)
-/**
- * Parse le CSV complet en gérant les retours à la ligne dans les champs entre guillemets.
- * Retourne un tableau de lignes (chaque ligne = string complète).
- */
-function parseCSVToLines(csv) {
-  const lines = [];
-  let currentLine = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < csv.length; i++) {
-    const ch = csv[i];
-    const nextCh = csv[i + 1];
-
-    // Gérer les guillemets
-    if (ch === '"') {
-      // Double guillemet "" = guillemet échappé
-      if (inQuotes && nextCh === '"') {
-        currentLine += '""';
-        i++; // Sauter le prochain guillemet
-        continue;
-      }
-      // Sinon, toggle l'état inQuotes
-      inQuotes = !inQuotes;
-      currentLine += ch;
-      continue;
-    }
-
-    // Gérer les retours à la ligne
-    if (ch === '\n' || ch === '\r') {
-      if (!inQuotes) {
-        // Fin de ligne réelle (hors guillemets)
-        if (currentLine.trim() !== "") {
-          lines.push(currentLine);
-          currentLine = "";
-        }
-        // Ignorer \r\n (Windows) en sautant le \n après \r
-        if (ch === '\r' && nextCh === '\n') {
-          i++;
-        }
-      } else {
-        // On est dans des guillemets, conserver le retour à la ligne
-        currentLine += ch;
-      }
-      continue;
-    }
-
-    // Caractère normal
-    currentLine += ch;
-  }
-
-  // Ajouter la dernière ligne si elle n'est pas vide
-  if (currentLine.trim() !== "") {
-    lines.push(currentLine);
-  }
-
-  return lines;
-}
-
 function parseCSVLine(line, sep = ",") {
   const out = [];
   let cur = "";
