@@ -65,7 +65,6 @@ const productFilterEl = document.getElementById("productFilter");
 const amountFilterEl = document.getElementById("amountFilter");
 const statusFilterEl = document.getElementById("statusFilter");
 const exportBtn = document.getElementById("exportBtn");
-const selectAllBtn = document.getElementById("selectAllBtn");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
 const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
@@ -960,19 +959,6 @@ selectAllCheckbox.addEventListener("change", (e) => {
   checkboxes.forEach((checkbox) => {
     checkbox.checked = e.target.checked;
   });
-});
-
-// Bouton "Tout sélectionner" (sélectionne les lignes filtrées visibles)
-selectAllBtn.addEventListener("click", () => {
-  const checkboxes = document.querySelectorAll(".order-checkbox");
-  const allChecked = Array.from(checkboxes).every((cb) => cb.checked);
-
-  // Toggle : si tout est coché, tout décocher, sinon tout cocher
-  checkboxes.forEach((checkbox) => {
-    checkbox.checked = !allChecked;
-  });
-
-  selectAllCheckbox.checked = !allChecked;
 });
 
 // Bouton "Supprimer sélection"
