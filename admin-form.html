@@ -43,6 +43,8 @@
         border: 1px solid #d9d2c7;
         font-size: 16px;
         font-family: Arial, sans-serif;
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .form-group textarea {
@@ -100,8 +102,49 @@
       }
 
       @media (max-width: 600px) {
+        body {
+          margin: 0;
+          padding: 0;
+        }
+
         .form-row {
           grid-template-columns: 1fr;
+        }
+
+        .admin-container {
+          margin: 0;
+          padding: 0;
+          min-height: 100vh;
+        }
+
+        .admin-card {
+          border-radius: 0;
+          padding: 1rem;
+          min-height: 100vh;
+          box-shadow: none;
+        }
+
+        .header-buttons {
+          flex-wrap: wrap;
+        }
+
+        .btn-back,
+        .logout-btn {
+          font-size: 13px;
+          padding: 6px 12px;
+        }
+
+        .image-upload-container {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .image-upload-container input[type="file"] {
+          width: 100%;
+        }
+
+        .upload-btn {
+          width: 100%;
         }
       }
 
