@@ -22,12 +22,22 @@ async function hashPassword(password) {
 
 // Fonction pour récupérer le hash depuis Google Sheets
 async function fetchPasswordHash() {
+  // Vérifier d'abord le cache
+  const cachedHash = sessionStorage.getItem('adminPasswordHash');
+  if (cachedHash) {
+    ADMIN_PASSWORD_HASH = cachedHash;
+    console.log('Hash chargé depuis le cache');
+    return;
+  }
+
   try {
     const response = await fetch(`${APPS_SCRIPT_URL}?action=getPasswordHash`);
     const data = await response.json();
 
     if (data.success && data.hash) {
       ADMIN_PASSWORD_HASH = data.hash;
+      // Mettre en cache pour les prochaines pages
+      sessionStorage.setItem('adminPasswordHash', data.hash);
       console.log('Hash personnalisé chargé depuis Google Sheets');
     } else {
       console.log('Utilisation du hash par défaut');
@@ -214,6 +224,7 @@ loginForm.addEventListener("submit", async (e) => {
 logoutBtn.addEventListener("click", () => {
   if (confirm("Voulez-vous vraiment vous déconnecter ?")) {
     sessionStorage.removeItem("adminAuth");
+    sessionStorage.removeItem("adminPasswordHash");
     window.location.href = "index.html";
   }
 });
@@ -433,8 +444,18 @@ async function init() {
   }
 }
 
-// Initialiser: récupérer le hash puis vérifier l'auth
+// Initialiser: vérifier l'auth d'abord, puis récupérer le hash en arrière-plan
 (async function() {
-  await fetchPasswordHash();
-  checkAuth();
+  const isAuthenticated = sessionStorage.getItem("adminAuth") === "true";
+
+  if (isAuthenticated) {
+    // Si déjà authentifié, afficher le contenu immédiatement
+    showAdminPanel();
+    // Récupérer le hash en arrière-plan (pour prochaine connexion)
+    fetchPasswordHash();
+  } else {
+    // Si non authentifié, récupérer le hash puis afficher la page de connexion
+    await fetchPasswordHash();
+    checkAuth();
+  }
 })();

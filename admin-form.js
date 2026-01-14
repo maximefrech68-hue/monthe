@@ -32,6 +32,7 @@ function checkAuth() {
 logoutBtn.addEventListener("click", () => {
   if (confirm("Voulez-vous vraiment vous déconnecter ?")) {
     sessionStorage.removeItem("adminAuth");
+    sessionStorage.removeItem("adminPasswordHash");
     window.location.href = "index.html";
   }
 });

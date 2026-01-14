@@ -22,12 +22,22 @@ async function hashPassword(password) {
 
 // Fonction pour récupérer le hash depuis Google Sheets
 async function fetchPasswordHash() {
+  // Vérifier d'abord le cache
+  const cachedHash = sessionStorage.getItem('adminPasswordHash');
+  if (cachedHash) {
+    ADMIN_PASSWORD_HASH = cachedHash;
+    console.log('Hash chargé depuis le cache');
+    return;
+  }
+
   try {
     const response = await fetch(`${APPS_SCRIPT_URL}?action=getPasswordHash`);
     const data = await response.json();
 
     if (data.success && data.hash) {
       ADMIN_PASSWORD_HASH = data.hash;
+      // Mettre en cache pour les prochaines pages
+      sessionStorage.setItem('adminPasswordHash', data.hash);
       console.log('Hash personnalisé chargé depuis Google Sheets');
     } else {
       console.log('Utilisation du hash par défaut');
@@ -261,6 +271,7 @@ changePasswordForm.addEventListener("submit", async (e) => {
     // Déconnexion automatique après 5 secondes
     setTimeout(() => {
       sessionStorage.removeItem("adminAuth");
+      sessionStorage.removeItem("adminPasswordHash");
       alert("Vous allez être déconnecté. Reconnectez-vous avec votre nouveau mot de passe.");
       window.location.href = "admin.html";
     }, 5000);
@@ -278,13 +289,16 @@ changePasswordForm.addEventListener("submit", async (e) => {
 logoutBtn.addEventListener("click", () => {
   if (confirm("Voulez-vous vraiment vous déconnecter ?")) {
     sessionStorage.removeItem("adminAuth");
+      sessionStorage.removeItem("adminPasswordHash");
     window.location.href = "index.html";
   }
 });
 
 // Initialisation
 (async function() {
-  await fetchPasswordHash();
+  // Vérifier l'auth d'abord (redirection si non authentifié)
   checkAuth();
   checkIfBlocked();
+  // Récupérer le hash en arrière-plan
+  fetchPasswordHash();
 })();
