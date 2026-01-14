@@ -162,17 +162,14 @@
         }
 
         /* Raccourcir le texte "Changer de mot de passe" */
-        .change-password-btn::before {
-          content: "🔒 Changer MP";
-        }
-
         .change-password-btn {
           font-size: 0;
           margin: 0 4px;
         }
 
-        .change-password-btn::after {
-          content: "";
+        .change-password-btn::before {
+          content: "🔒 Changer MP";
+          font-size: 12px;
         }
 
         header {
