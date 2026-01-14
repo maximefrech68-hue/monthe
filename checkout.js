@@ -344,6 +344,9 @@ async function handleStripeReturn() {
   }
 
   if (success === "1") {
+    // Masquer la topbar immédiatement après retour de Stripe
+    document.querySelector(".topbar")?.classList.add("hidden");
+
     // Stripe OK → on envoie la commande "paid" à Google Sheet
     const pending = loadPendingOrder();
     if (!pending) {
@@ -393,9 +396,6 @@ async function handleStripeReturn() {
 
       form?.closest(".checkout-card")?.classList.add("hidden");
       confirmation?.classList.remove("hidden");
-
-      // Masquer la topbar pour éviter les boutons redondants
-      document.querySelector(".topbar")?.classList.add("hidden");
     } catch (err) {
       alert(
         "Paiement OK, mais erreur d'enregistrement commande : " + err.message
