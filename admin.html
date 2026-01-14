@@ -133,6 +133,73 @@
       .orders-btn:hover {
         background: #8d7160;
       }
+
+      /* Responsive mobile */
+      @media (max-width: 768px) {
+        .topbar {
+          width: 100%;
+          margin: 0;
+          padding: 12px;
+          box-sizing: border-box;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: space-between;
+        }
+
+        .add-btn {
+          width: 48px;
+          height: 48px;
+          font-size: 24px;
+          padding: 0;
+          flex-shrink: 0;
+        }
+
+        .orders-btn,
+        .change-password-btn,
+        .logout-btn {
+          font-size: 12px;
+          padding: 6px 10px;
+        }
+
+        /* Raccourcir le texte "Changer de mot de passe" */
+        .change-password-btn::before {
+          content: "🔒 Changer MP";
+        }
+
+        .change-password-btn {
+          font-size: 0;
+          margin: 0 4px;
+        }
+
+        .change-password-btn::after {
+          content: "";
+        }
+
+        header {
+          padding: 1.5rem 1rem;
+        }
+
+        header h1 {
+          font-size: 1.5rem;
+        }
+      }
+
+      @media (max-width: 600px) {
+        body {
+          margin: 0;
+          padding: 0;
+        }
+
+        .toolbar {
+          padding: 1rem;
+        }
+
+        .products {
+          padding: 1rem;
+          justify-content: center;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        }
+      }
     </style>
   </head>
   <body>
