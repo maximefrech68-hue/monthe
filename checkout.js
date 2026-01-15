@@ -116,15 +116,13 @@ function renderCartModal() {
         <strong>${p.name}</strong><br/>
         <span>${Number(p.price_eur || 0).toFixed(2)} €</span>
       </div>
-      <div>
-        <div class="qty-remove-container">
-          <div class="qty">
-            <button data-action="dec" data-id="${id}">-</button>
-            <span>${qty}</span>
-            <button data-action="inc" data-id="${id}">+</button>
-          </div>
-          <button class="remove-btn" data-action="remove" data-id="${id}">Supprimer</button>
+      <div style="text-align:right;">
+        <div class="qty">
+          <button data-action="dec" data-id="${id}">-</button>
+          <span>${qty}</span>
+          <button data-action="inc" data-id="${id}">+</button>
         </div>
+        <button class="remove-btn" data-action="remove" data-id="${id}">Supprimer</button>
       </div>
     `;
     cartItemsEl.appendChild(row);
