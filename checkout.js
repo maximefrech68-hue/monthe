@@ -344,12 +344,60 @@ async function handleStripeReturn() {
   }
 
   if (success === "1") {
-    // Masquer le formulaire
-    const checkoutPage = document.querySelector(".checkout-page");
-    const topbar = document.querySelector(".topbar");
+    // Créer et afficher un spinner plein écran
+    const loadingOverlay = document.createElement("div");
+    loadingOverlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    `;
 
-    checkoutPage?.classList.add("hidden");
-    topbar?.classList.add("hidden");
+    const spinner = document.createElement("div");
+    spinner.style.cssText = `
+      width: 60px;
+      height: 60px;
+      border: 6px solid #f7f4ef;
+      border-top: 6px solid #a0826d;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    `;
+
+    const text = document.createElement("p");
+    text.textContent = "Traitement de votre commande...";
+    text.style.cssText = `
+      margin-top: 1.5rem;
+      font-size: 16px;
+      color: #2b2b2b;
+    `;
+
+    // Ajouter l'animation spin si elle n'existe pas
+    if (!document.querySelector('#spin-keyframes')) {
+      const style = document.createElement('style');
+      style.id = 'spin-keyframes';
+      style.textContent = `
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    loadingOverlay.appendChild(spinner);
+    loadingOverlay.appendChild(text);
+    document.body.appendChild(loadingOverlay);
+
+    // Masquer le reste de la page
+    document.querySelector("header")?.classList.add("hidden");
+    document.querySelector(".checkout-page")?.classList.add("hidden");
 
     // Stripe OK → on envoie la commande "paid" à Google Sheet
     const pending = loadPendingOrder();
@@ -398,13 +446,15 @@ async function handleStripeReturn() {
       renderSummary();
       clearPendingOrder();
 
-      // Afficher la confirmation
-      form?.closest(".checkout-card")?.classList.add("hidden");
+      // Supprimer le spinner et afficher la confirmation
+      loadingOverlay.remove();
+      document.querySelector("header")?.classList.remove("hidden");
       confirmation?.classList.remove("hidden");
     } catch (err) {
-      // En cas d'erreur, réafficher le formulaire
-      checkoutPage?.classList.remove("hidden");
-      topbar?.classList.remove("hidden");
+      // En cas d'erreur, supprimer le spinner et réafficher le formulaire
+      loadingOverlay.remove();
+      document.querySelector("header")?.classList.remove("hidden");
+      document.querySelector(".checkout-page")?.classList.remove("hidden");
       alert(
         "Paiement OK, mais erreur d'enregistrement commande : " + err.message
       );
