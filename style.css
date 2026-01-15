@@ -389,31 +389,3 @@ header {
   border-bottom: 1px solid #eee;
 }
 
-.loading-spinner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  text-align: center;
-}
-
-.spinner {
-  width: 60px;
-  height: 60px;
-  border: 6px solid #f7f4ef;
-  border-top: 6px solid #a0826d;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.loading-spinner p {
-  margin-top: 1.5rem;
-  font-size: 16px;
-  color: #2b2b2b;
-}

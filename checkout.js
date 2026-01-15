@@ -344,12 +344,10 @@ async function handleStripeReturn() {
   }
 
   if (success === "1") {
-    // Afficher le spinner de chargement et masquer le reste
-    const loadingSpinner = document.getElementById("loadingSpinner");
+    // Masquer le formulaire
     const checkoutPage = document.querySelector(".checkout-page");
     const topbar = document.querySelector(".topbar");
 
-    loadingSpinner?.classList.remove("hidden");
     checkoutPage?.classList.add("hidden");
     topbar?.classList.add("hidden");
 
@@ -400,13 +398,11 @@ async function handleStripeReturn() {
       renderSummary();
       clearPendingOrder();
 
-      // Masquer le spinner et afficher la confirmation
-      loadingSpinner?.classList.add("hidden");
+      // Afficher la confirmation
       form?.closest(".checkout-card")?.classList.add("hidden");
       confirmation?.classList.remove("hidden");
     } catch (err) {
-      // En cas d'erreur, masquer le spinner et afficher l'alerte
-      loadingSpinner?.classList.add("hidden");
+      // En cas d'erreur, réafficher le formulaire
       checkoutPage?.classList.remove("hidden");
       topbar?.classList.remove("hidden");
       alert(
