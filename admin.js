@@ -260,7 +260,7 @@ function renderProducts(products) {
       <h3>${p.name}</h3>
       <p>${p.short_desc ?? ""}</p>
       <div class="price-status-container">
-        <p class="price">${Number(p.price_eur || 0).toFixed(2)} €</p>
+        <span class="price">${Number(p.price_eur || 0).toFixed(2)} €</span>
         <span class="status-badge ${statusClass}">${statusText}</span>
       </div>
       <div class="product-actions">
