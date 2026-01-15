@@ -306,7 +306,12 @@ header {
   .checkout-page > .checkout-card:first-child {
     min-width: unset;
     max-width: unset;
-    max-height: none;
+    height: auto;
+    overflow-y: visible;
+  }
+
+  .checkout-page > .checkout-card:last-child {
+    height: auto;
     overflow-y: visible;
   }
 
@@ -355,7 +360,12 @@ header {
 .checkout-page > .checkout-card:first-child {
   min-width: 280px;
   max-width: 400px;
-  max-height: 600px;
+  height: 600px;
+  overflow-y: auto;
+}
+
+.checkout-page > .checkout-card:last-child {
+  height: 600px;
   overflow-y: auto;
 }
 
