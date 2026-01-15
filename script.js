@@ -232,9 +232,7 @@ container.addEventListener("click", (e) => {
   if (btn.disabled || btn.classList.contains("btn-disabled")) return;
 
   const id = btn.dataset.add;
-  if (addToCart(id)) {
-    alert("Ajouté au panier ✅");
-  }
+  addToCart(id);
 });
 
 // applique recherche/filtre/tri
