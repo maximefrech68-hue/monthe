@@ -5,24 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Checkout – MonThé</title>
     <link rel="stylesheet" href="style.css" />
-    <style>
-      .checkout-page {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-      .checkout-page.hidden,
-      .topbar.hidden {
-        display: none !important;
-      }
-      @media (max-width: 768px) {
-        .checkout-page {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
     <script>
       // Masquer immédiatement le formulaire si on revient de Stripe avec succès
       if (window.location.search.includes('success=1')) {

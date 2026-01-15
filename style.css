@@ -292,9 +292,9 @@ header {
 
 .checkout-page {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 18px;
-  max-width: 980px;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -342,15 +342,13 @@ header {
 }
 
 .checkout-page > .checkout-card:first-child {
-  min-width: 280px;
-  max-width: 400px;
-  height: 600px;
-  overflow-y: auto;
+  height: auto;
+  overflow-y: visible;
 }
 
 .checkout-page > .checkout-card:last-child {
-  height: 600px;
-  overflow-y: auto;
+  height: auto;
+  overflow-y: visible;
 }
 
 .form {
