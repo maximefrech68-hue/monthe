@@ -379,6 +379,12 @@ header {
   display: none;
 }
 
+#summary {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
 .summary-item {
   display: flex;
   justify-content: space-between;
