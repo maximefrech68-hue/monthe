@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Checkout – MonThé</title>
     <link rel="stylesheet" href="style.css" />
+    <script>
+      // Masquer immédiatement le contenu si on revient de Stripe avec succès
+      if (window.location.search.includes('success=1')) {
+        document.write('<style>header,.checkout-page{display:none!important;}body{background:white;}</style>');
+      }
+    </script>
   </head>
   <body>
     <header>

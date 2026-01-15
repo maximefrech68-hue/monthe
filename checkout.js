@@ -395,9 +395,7 @@ async function handleStripeReturn() {
     loadingOverlay.appendChild(text);
     document.body.appendChild(loadingOverlay);
 
-    // Masquer le reste de la page
-    document.querySelector("header")?.classList.add("hidden");
-    document.querySelector(".checkout-page")?.classList.add("hidden");
+    // Le header et checkout-page sont déjà masqués par le style inline
 
     // Stripe OK → on envoie la commande "paid" à Google Sheet
     const pending = loadPendingOrder();
@@ -448,13 +446,17 @@ async function handleStripeReturn() {
 
       // Supprimer le spinner et afficher la confirmation
       loadingOverlay.remove();
-      document.querySelector("header")?.classList.remove("hidden");
       confirmation?.classList.remove("hidden");
     } catch (err) {
       // En cas d'erreur, supprimer le spinner et réafficher le formulaire
       loadingOverlay.remove();
-      document.querySelector("header")?.classList.remove("hidden");
-      document.querySelector(".checkout-page")?.classList.remove("hidden");
+      // Supprimer le style inline qui cachait le contenu
+      const hideStyle = document.querySelector('style[data-hide-checkout]');
+      if (!hideStyle) {
+        // Si le style a été injecté via document.write, on doit forcer l'affichage
+        document.querySelector("header").style.display = '';
+        document.querySelector(".checkout-page").style.display = '';
+      }
       alert(
         "Paiement OK, mais erreur d'enregistrement commande : " + err.message
       );
