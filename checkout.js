@@ -344,24 +344,12 @@ async function handleStripeReturn() {
   }
 
   if (success === "1") {
-    // Créer et afficher le spinner de chargement dynamiquement
-    const main = document.querySelector("main");
+    // Afficher le spinner de chargement et masquer le reste
+    const loadingSpinner = document.getElementById("loadingSpinner");
     const checkoutPage = document.querySelector(".checkout-page");
     const topbar = document.querySelector(".topbar");
 
-    // Créer le spinner
-    const loadingSpinner = document.createElement("div");
-    loadingSpinner.id = "loadingSpinner";
-    loadingSpinner.className = "loading-spinner";
-    loadingSpinner.innerHTML = `
-      <div class="spinner"></div>
-      <p>Traitement de votre commande...</p>
-    `;
-
-    // Insérer le spinner au début du main
-    main?.insertBefore(loadingSpinner, main.firstChild);
-
-    // Masquer le reste
+    loadingSpinner?.classList.remove("hidden");
     checkoutPage?.classList.add("hidden");
     topbar?.classList.add("hidden");
 
@@ -412,14 +400,14 @@ async function handleStripeReturn() {
       renderSummary();
       clearPendingOrder();
 
-      // Supprimer le spinner et afficher la confirmation centrée
-      loadingSpinner?.remove();
+      // Masquer le spinner et afficher la confirmation centrée
+      loadingSpinner?.classList.add("hidden");
       form?.closest(".checkout-card")?.classList.add("hidden");
       confirmation?.classList.remove("hidden");
       confirmation?.classList.add("confirmation-centered");
     } catch (err) {
-      // En cas d'erreur, supprimer le spinner et réafficher le formulaire
-      loadingSpinner?.remove();
+      // En cas d'erreur, masquer le spinner et afficher l'alerte
+      loadingSpinner?.classList.add("hidden");
       checkoutPage?.classList.remove("hidden");
       topbar?.classList.remove("hidden");
       alert(
@@ -433,6 +421,13 @@ async function handleStripeReturn() {
 /* -------------------- INIT -------------------- */
 async function init() {
   try {
+    // S'assurer que le spinner est caché au démarrage
+    const loadingSpinner = document.getElementById("loadingSpinner");
+    const checkoutPage = document.querySelector(".checkout-page");
+
+    loadingSpinner?.classList.add("hidden");
+    checkoutPage?.classList.remove("hidden");
+
     allProducts = await fetchProductsFromSheet(); // fournie par products.js
     cart = loadCart();
     updateCartBadge();
