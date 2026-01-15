@@ -72,7 +72,112 @@ function addToCart(id) {
   cart[id] = currentQty + 1;
   saveCart();
   updateCartBadge();
+
+  // Afficher notification de confirmation
+  showAddToCartNotification(product);
+
   return true;
+}
+
+function showAddToCartNotification(product) {
+  // Créer la notification
+  const notification = document.createElement('div');
+  notification.className = 'cart-notification';
+  notification.innerHTML = `
+    <div class="cart-notification-content">
+      <span class="cart-notification-icon">✓</span>
+      <div>
+        <strong>${product.name}</strong>
+        <p>Ajouté au panier</p>
+      </div>
+    </div>
+  `;
+
+  // Ajouter les styles inline
+  notification.style.cssText = `
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    animation: slideInRight 0.3s ease-out;
+    border-left: 4px solid #4a7c59;
+  `;
+
+  const content = notification.querySelector('.cart-notification-content');
+  content.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  `;
+
+  const icon = notification.querySelector('.cart-notification-icon');
+  icon.style.cssText = `
+    width: 32px;
+    height: 32px;
+    background: #4a7c59;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    flex-shrink: 0;
+  `;
+
+  notification.querySelector('strong').style.cssText = `
+    display: block;
+    color: #2b2b2b;
+    font-size: 14px;
+    margin-bottom: 2px;
+  `;
+
+  notification.querySelector('p').style.cssText = `
+    margin: 0;
+    color: #666;
+    font-size: 13px;
+  `;
+
+  // Ajouter l'animation si elle n'existe pas
+  if (!document.querySelector('#cart-notification-keyframes')) {
+    const style = document.createElement('style');
+    style.id = 'cart-notification-keyframes';
+    style.textContent = `
+      @keyframes slideInRight {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(notification);
+
+  // Supprimer après 3 secondes avec animation
+  setTimeout(() => {
+    notification.style.animation = 'slideOutRight 0.3s ease-out';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
 }
 
 function changeQty(id, delta) {
