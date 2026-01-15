@@ -289,12 +289,42 @@ header {
     grid-template-columns: 1fr;
   }
 }
+
 .checkout-page {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: auto 1fr;
   gap: 18px;
   max-width: 980px;
   margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .checkout-page {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-page > .checkout-card:first-child {
+    min-width: unset;
+    max-width: unset;
+  }
+
+  header {
+    padding: 1rem 0.5rem;
+  }
+
+  main {
+    padding: 1rem !important;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cart-btn, .admin-btn {
+    font-size: 14px;
+    padding: 8px 10px;
+  }
 }
 
 .checkout-card {
@@ -302,6 +332,11 @@ header {
   border-radius: 14px;
   padding: 18px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.checkout-page > .checkout-card:first-child {
+  min-width: 280px;
+  max-width: 400px;
 }
 
 .form {

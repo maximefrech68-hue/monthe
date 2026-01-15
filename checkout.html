@@ -26,6 +26,17 @@
     <main style="padding: 2rem">
       <div class="checkout-page">
         <section class="checkout-card">
+          <h2>Récapitulatif</h2>
+          <div id="summary"></div>
+
+          <div class="cart-footer" style="margin-top: 16px">
+            <div>
+              Total : <strong><span id="total">0.00</span> €</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="checkout-card">
           <h2>Informations</h2>
 
           <form id="checkoutForm" class="form" autocomplete="off">
@@ -70,20 +81,9 @@
               Valider la commande
             </button>
             <p class="hint">
-              Paiement simulé pour l’instant (Stripe à l’étape suivante).
+              Paiement simulé pour l'instant (Stripe à l'étape suivante).
             </p>
           </form>
-        </section>
-
-        <section class="checkout-card">
-          <h2>Récapitulatif</h2>
-          <div id="summary"></div>
-
-          <div class="cart-footer" style="margin-top: 16px">
-            <div>
-              Total : <strong><span id="total">0.00</span> €</strong>
-            </div>
-          </div>
         </section>
       </div>
 
