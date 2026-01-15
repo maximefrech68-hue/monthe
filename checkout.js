@@ -400,10 +400,11 @@ async function handleStripeReturn() {
       renderSummary();
       clearPendingOrder();
 
-      // Masquer le spinner et afficher la confirmation
+      // Masquer le spinner et afficher la confirmation centrée
       loadingSpinner?.classList.add("hidden");
       form?.closest(".checkout-card")?.classList.add("hidden");
       confirmation?.classList.remove("hidden");
+      confirmation?.classList.add("confirmation-centered");
     } catch (err) {
       // En cas d'erreur, masquer le spinner et afficher l'alerte
       loadingSpinner?.classList.add("hidden");
@@ -420,6 +421,13 @@ async function handleStripeReturn() {
 /* -------------------- INIT -------------------- */
 async function init() {
   try {
+    // S'assurer que le spinner est caché au démarrage
+    const loadingSpinner = document.getElementById("loadingSpinner");
+    const checkoutPage = document.querySelector(".checkout-page");
+
+    loadingSpinner?.classList.add("hidden");
+    checkoutPage?.classList.remove("hidden");
+
     allProducts = await fetchProductsFromSheet(); // fournie par products.js
     cart = loadCart();
     updateCartBadge();
