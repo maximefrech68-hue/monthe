@@ -296,6 +296,7 @@ header {
   gap: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+  align-items: start;
 }
 
 @media (max-width: 768px) {
@@ -382,7 +383,6 @@ header {
 #summary {
   max-height: 400px;
   overflow-y: auto;
-  margin-bottom: 16px;
 }
 
 .summary-item {
