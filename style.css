@@ -306,6 +306,8 @@ header {
   .checkout-page > .checkout-card:first-child {
     min-width: unset;
     max-width: unset;
+    max-height: none;
+    overflow-y: visible;
   }
 
   header {
@@ -353,6 +355,8 @@ header {
 .checkout-page > .checkout-card:first-child {
   min-width: 280px;
   max-width: 400px;
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 .form {
