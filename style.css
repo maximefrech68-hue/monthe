@@ -221,6 +221,7 @@ header {
   border: 1px solid #ddd;
   background: #f7f7f7;
   cursor: pointer;
+  font-size: 14px;
 }
 
 .remove-btn {
@@ -229,6 +230,58 @@ header {
   cursor: pointer;
   color: #b00020;
   font-weight: 700;
+  font-size: 14px;
+}
+
+/* Responsive pour le panier sur mobile */
+@media (max-width: 640px) {
+  .modal-content {
+    padding: 12px;
+    max-height: 90vh;
+  }
+
+  .cart-item {
+    grid-template-columns: 48px 1fr;
+    gap: 8px;
+    padding: 10px 0;
+  }
+
+  .cart-item img {
+    width: 48px;
+    height: 36px;
+  }
+
+  .cart-item > div:nth-child(2) {
+    font-size: 14px;
+  }
+
+  .cart-item > div:last-child {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .qty button {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .remove-btn {
+    font-size: 13px;
+    padding: 4px 8px;
+  }
+
+  .cart-footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .cart-footer button {
+    width: 100%;
+  }
 }
 
 .cart-footer {
