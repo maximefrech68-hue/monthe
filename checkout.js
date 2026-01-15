@@ -344,8 +344,14 @@ async function handleStripeReturn() {
   }
 
   if (success === "1") {
-    // Masquer la topbar immédiatement après retour de Stripe
-    document.querySelector(".topbar")?.classList.add("hidden");
+    // Afficher le spinner de chargement et masquer le reste
+    const loadingSpinner = document.getElementById("loadingSpinner");
+    const checkoutPage = document.querySelector(".checkout-page");
+    const topbar = document.querySelector(".topbar");
+
+    loadingSpinner?.classList.remove("hidden");
+    checkoutPage?.classList.add("hidden");
+    topbar?.classList.add("hidden");
 
     // Stripe OK → on envoie la commande "paid" à Google Sheet
     const pending = loadPendingOrder();
@@ -394,9 +400,15 @@ async function handleStripeReturn() {
       renderSummary();
       clearPendingOrder();
 
+      // Masquer le spinner et afficher la confirmation
+      loadingSpinner?.classList.add("hidden");
       form?.closest(".checkout-card")?.classList.add("hidden");
       confirmation?.classList.remove("hidden");
     } catch (err) {
+      // En cas d'erreur, masquer le spinner et afficher l'alerte
+      loadingSpinner?.classList.add("hidden");
+      checkoutPage?.classList.remove("hidden");
+      topbar?.classList.remove("hidden");
       alert(
         "Paiement OK, mais erreur d'enregistrement commande : " + err.message
       );
