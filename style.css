@@ -393,3 +393,32 @@ header {
   border-bottom: 1px solid #eee;
 }
 
+/* Container pour prix et badge statut dans admin */
+.price-status-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Badge de statut actif/inactif dans admin */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-inactive {
+  background-color: #e2e3e5;
+  color: #6c757d;
+}
+

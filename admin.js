@@ -252,11 +252,19 @@ function renderProducts(products) {
       ? p.image_url
       : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'%3E%3Crect width='600' height='400' fill='%23f7f4ef'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='%23a0826d'%3EMonThé - Pas d'image%3C/text%3E%3C/svg%3E";
 
+    // Déterminer le statut actif/inactif
+    const isActive = p.active === true || p.active === null;
+    const statusBadgeClass = isActive ? "status-badge status-active" : "status-badge status-inactive";
+    const statusBadgeText = isActive ? "Actif" : "Désactivé";
+
     card.innerHTML = `
       <img src="${imageUrl}" alt="${p.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'600\\' height=\\'400\\' viewBox=\\'0 0 600 400\\'%3E%3Crect width=\\'600\\' height=\\'400\\' fill=\\'%23f7f4ef\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' font-family=\\'Arial\\' font-size=\\'24\\' fill=\\'%23a0826d\\'%3EImage non disponible%3C/text%3E%3C/svg%3E'">
       <h3>${p.name}</h3>
       <p>${p.short_desc ?? ""}</p>
-      <p class="price">${Number(p.price_eur || 0).toFixed(2)} €</p>
+      <div class="price-status-container">
+        <p class="price">${Number(p.price_eur || 0).toFixed(2)} €</p>
+        <span class="${statusBadgeClass}">${statusBadgeText}</span>
+      </div>
       <div class="product-actions">
         <button class="primary-btn btn-edit" data-edit="${
           p.id
