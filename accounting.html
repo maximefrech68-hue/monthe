@@ -323,6 +323,16 @@
           <input type="hidden" id="editOrderId" />
 
           <div class="form-group">
+            <label for="editClient">Client *</label>
+            <input
+              type="text"
+              id="editClient"
+              placeholder="Nom du client"
+              required
+            />
+          </div>
+
+          <div class="form-group">
             <label for="editMontantTTC">Montant TTC (€) *</label>
             <input
               type="number"
@@ -333,46 +343,31 @@
               required
             />
             <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
-              Prix de vente TTC (TVA incluse)
+              Les montants HT, TVA, frais et net seront recalculés automatiquement
             </small>
           </div>
 
           <div class="form-group">
-            <label for="editTauxTVA">Taux TVA (%) *</label>
-            <input
-              type="number"
-              id="editTauxTVA"
-              step="0.1"
-              min="0"
-              max="100"
-              placeholder="20"
-              required
-            />
-            <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
-              Taux de TVA applicable (défaut: 20%)
-            </small>
+            <label for="editMoyenPaiement">Moyen de paiement *</label>
+            <select id="editMoyenPaiement" required>
+              <option value="">-- Sélectionner --</option>
+              <option value="Stripe">Stripe</option>
+              <option value="PayPal">PayPal</option>
+              <option value="Virement">Virement</option>
+              <option value="Chèque">Chèque</option>
+              <option value="Espèces">Espèces</option>
+            </select>
           </div>
 
           <div class="form-group">
-            <label for="editFraisPaiement">Frais de paiement (€) *</label>
-            <input
-              type="number"
-              id="editFraisPaiement"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              required
-            />
-            <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
-              Frais de plateforme (Netlify/Stripe)
-            </small>
-          </div>
-
-          <div style="background: #f0f8ff; padding: 12px; border-radius: 8px; margin-top: 1rem; font-size: 13px;">
-            <strong>Calculs automatiques:</strong><br>
-            • Montant HT = TTC ÷ (1 + taux TVA)<br>
-            • TVA = TTC - HT<br>
-            • Net encaissé = HT - frais = TTC - TVA - frais
+            <label for="editPlateforme">Plateforme *</label>
+            <select id="editPlateforme" required>
+              <option value="">-- Sélectionner --</option>
+              <option value="Netlify">Netlify</option>
+              <option value="Shopify">Shopify</option>
+              <option value="WooCommerce">WooCommerce</option>
+              <option value="Direct">Direct</option>
+            </select>
           </div>
 
           <div style="display: flex; gap: 10px; margin-top: 1.5rem;">

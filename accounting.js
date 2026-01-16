@@ -268,7 +268,6 @@ async function fetchVentesFromSheet() {
       v.montant_ht = Number(v.montant_ht || 0);
       v.tva = Number(v.tva || 0);
       v.montant_ttc = Number(v.montant_ttc || 0);
-      v.taux_tva = Number(v.taux_tva || 20); // Défaut 20% si non présent
       v.frais_paiement = Number(v.frais_paiement || 0);
       v.net_encaisse = Number(v.net_encaisse || 0);
 
@@ -624,9 +623,10 @@ function showEditModal(orderId) {
 
   // Remplir le formulaire
   document.getElementById("editOrderId").value = vente.order_id;
+  document.getElementById("editClient").value = vente.client;
   document.getElementById("editMontantTTC").value = vente.montant_ttc.toFixed(2);
-  document.getElementById("editTauxTVA").value = vente.taux_tva || 20;
-  document.getElementById("editFraisPaiement").value = vente.frais_paiement.toFixed(2);
+  document.getElementById("editMoyenPaiement").value = vente.moyen_paiement;
+  document.getElementById("editPlateforme").value = vente.plateforme;
 
   // Afficher le modal
   editModal.classList.remove("hidden");
@@ -652,22 +652,13 @@ editForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const orderId = document.getElementById("editOrderId").value;
+  const client = document.getElementById("editClient").value;
   const montantTTC = parseFloat(document.getElementById("editMontantTTC").value);
-  const tauxTVA = parseFloat(document.getElementById("editTauxTVA").value);
-  const fraisPaiement = parseFloat(document.getElementById("editFraisPaiement").value);
+  const moyenPaiement = document.getElementById("editMoyenPaiement").value;
+  const plateforme = document.getElementById("editPlateforme").value;
 
-  if (!orderId || isNaN(montantTTC) || isNaN(tauxTVA) || isNaN(fraisPaiement)) {
-    alert("Veuillez remplir tous les champs obligatoires avec des valeurs valides.");
-    return;
-  }
-
-  if (tauxTVA < 0 || tauxTVA > 100) {
-    alert("Le taux de TVA doit être entre 0 et 100%.");
-    return;
-  }
-
-  if (montantTTC < 0 || fraisPaiement < 0) {
-    alert("Les montants ne peuvent pas être négatifs.");
+  if (!orderId || !client || isNaN(montantTTC) || !moyenPaiement || !plateforme) {
+    alert("Veuillez remplir tous les champs obligatoires.");
     return;
   }
 
@@ -680,14 +671,15 @@ editForm.addEventListener("submit", async (e) => {
         action: "updateVente",
         order_id: orderId,
         updates: {
+          client: client,
           montant_ttc: montantTTC,
-          taux_tva: tauxTVA,
-          frais_paiement: fraisPaiement
+          moyen_paiement: moyenPaiement,
+          plateforme: plateforme
         }
       }),
     });
 
-    alert("Entrée modifiée avec succès ! Les montants HT, TVA et net ont été recalculés.");
+    alert("Entrée modifiée avec succès !");
     editModal.classList.add("hidden");
     location.reload();
   } catch (error) {
