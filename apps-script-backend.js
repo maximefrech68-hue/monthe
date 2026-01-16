@@ -202,7 +202,9 @@ function handleOrder(data) {
 function createVentesEntry(order, invoiceUrl) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sh = ss.getSheetByName("VENTES (Livre des recettes)") || ss.insertSheet("VENTES (Livre des recettes)");
+    const sh =
+      ss.getSheetByName("VENTES (Livre des recettes)") ||
+      ss.insertSheet("VENTES (Livre des recettes)");
 
     // Headers pour la feuille VENTES
     const headersWanted = [
