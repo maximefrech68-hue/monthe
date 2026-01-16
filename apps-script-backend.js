@@ -60,6 +60,12 @@ function doPost(e) {
       return deleteVenteEntry(data.order_id);
     } else if (action === "syncVentesFromOrders") {
       return syncVentesFromOrders();
+    } else if (action === "addDepense") {
+      return addDepenseToSheet(data.data);
+    } else if (action === "updateDepense") {
+      return updateDepenseEntry(data.date, data.fournisseur, data.updates);
+    } else if (action === "deleteDepense") {
+      return deleteDepenseEntry(data.date, data.fournisseur);
     } else if (data.order_id || data.order_ref || data.email) {
       // Si pas d'action mais qu'on a des infos de commande, c'est une commande
       return handleOrder(data);
@@ -1447,6 +1453,178 @@ function testGenerateInvoicePDF() {
   } catch (err) {
     Logger.log("Erreur: " + err.message);
     return "Erreur: " + err.message;
+  }
+}
+
+/* ==================== GESTION DES DÉPENSES (ACHATS) ==================== */
+
+/**
+ * Ajoute une dépense dans la feuille ACHATS
+ * @param {Object} depenseData - Données de la dépense
+ * @returns {Object} Résultat de l'opération
+ */
+function addDepenseToSheet(depenseData) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("ACHATS (Registre des dépenses)");
+
+    if (!sheet) {
+      throw new Error("La feuille 'ACHATS (Registre des dépenses)' n'existe pas");
+    }
+
+    // Headers pour la feuille ACHATS
+    const headersWanted = [
+      "Date",
+      "Fournisseur",
+      "Catégorie",
+      "Description",
+      "HT",
+      "TVA",
+      "TTC",
+      "Paiement",
+      "Justificatif"
+    ];
+
+    const headers = ensureHeaders(sheet, headersWanted);
+
+    // Construire la ligne
+    const rowObj = {
+      "Date": depenseData.Date || new Date(),
+      "Fournisseur": depenseData.Fournisseur || "",
+      "Catégorie": depenseData.Catégorie || "",
+      "Description": depenseData.Description || "",
+      "HT": Number(depenseData.HT || 0),
+      "TVA": Number(depenseData.TVA || 0),
+      "TTC": Number(depenseData.TTC || 0),
+      "Paiement": depenseData.Paiement || "",
+      "Justificatif": depenseData.Justificatif || ""
+    };
+
+    // Ajouter la ligne
+    const row = buildRowFromHeaders(headers, rowObj);
+    sheet.appendRow(row);
+
+    Logger.log("Dépense ajoutée: " + depenseData.Fournisseur);
+    return createResponse(true, "Dépense ajoutée avec succès", {
+      fournisseur: depenseData.Fournisseur
+    });
+  } catch (error) {
+    Logger.log("Erreur addDepenseToSheet: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/**
+ * Met à jour une dépense dans la feuille ACHATS
+ * @param {string} date - Date de la dépense
+ * @param {string} fournisseur - Nom du fournisseur
+ * @param {Object} updates - Champs à mettre à jour
+ * @returns {Object} Résultat de l'opération
+ */
+function updateDepenseEntry(date, fournisseur, updates) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("ACHATS (Registre des dépenses)");
+
+    if (!sheet) {
+      throw new Error("La feuille 'ACHATS (Registre des dépenses)' n'existe pas");
+    }
+
+    // Récupérer les données
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    // Trouver les index des colonnes
+    const dateColIndex = headers.indexOf("Date");
+    const fournisseurColIndex = headers.indexOf("Fournisseur");
+
+    if (dateColIndex === -1 || fournisseurColIndex === -1) {
+      throw new Error("Colonnes 'Date' ou 'Fournisseur' non trouvées");
+    }
+
+    // Trouver la ligne
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][dateColIndex] === date && data[i][fournisseurColIndex] === fournisseur) {
+        rowIndex = i + 1; // +1 car getRange est 1-indexed
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      throw new Error("Dépense non trouvée: " + date + " - " + fournisseur);
+    }
+
+    // Mettre à jour les champs fournis
+    Object.keys(updates).forEach((field) => {
+      const colIndex = headers.indexOf(field);
+      if (colIndex !== -1) {
+        sheet.getRange(rowIndex, colIndex + 1).setValue(updates[field]);
+      }
+    });
+
+    Logger.log("Dépense mise à jour: " + date + " - " + fournisseur);
+    return createResponse(true, "Dépense mise à jour avec succès", {
+      date: date,
+      fournisseur: fournisseur
+    });
+  } catch (error) {
+    Logger.log("Erreur updateDepenseEntry: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/**
+ * Supprime une dépense de la feuille ACHATS
+ * @param {string} date - Date de la dépense
+ * @param {string} fournisseur - Nom du fournisseur
+ * @returns {Object} Résultat de l'opération
+ */
+function deleteDepenseEntry(date, fournisseur) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("ACHATS (Registre des dépenses)");
+
+    if (!sheet) {
+      throw new Error("La feuille 'ACHATS (Registre des dépenses)' n'existe pas");
+    }
+
+    // Récupérer les données
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    // Trouver les index des colonnes
+    const dateColIndex = headers.indexOf("Date");
+    const fournisseurColIndex = headers.indexOf("Fournisseur");
+
+    if (dateColIndex === -1 || fournisseurColIndex === -1) {
+      throw new Error("Colonnes 'Date' ou 'Fournisseur' non trouvées");
+    }
+
+    // Trouver la ligne
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][dateColIndex] === date && data[i][fournisseurColIndex] === fournisseur) {
+        rowIndex = i + 1; // +1 car deleteRow est 1-indexed
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      throw new Error("Dépense non trouvée: " + date + " - " + fournisseur);
+    }
+
+    // Supprimer la ligne
+    sheet.deleteRow(rowIndex);
+
+    Logger.log("Dépense supprimée: " + date + " - " + fournisseur);
+    return createResponse(true, "Dépense supprimée avec succès", {
+      date: date,
+      fournisseur: fournisseur
+    });
+  } catch (error) {
+    Logger.log("Erreur deleteDepenseEntry: " + error);
+    return createResponse(false, error.toString());
   }
 }
 
