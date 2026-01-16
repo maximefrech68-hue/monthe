@@ -249,39 +249,16 @@
     </style>
   </head>
   <body>
-    <!-- Section 1: Login -->
-    <div id="loginScreen" class="login-screen">
-      <h1 style="text-align: center; color: #a0826d;">MonThé - Dépenses</h1>
-      <p style="text-align: center; color: #666; margin-bottom: 2rem;">
-        Connexion sécurisée
-      </p>
-
-      <div id="errorMsg" class="error-msg"></div>
-
-      <form class="login-form" id="loginForm">
-        <input
-          type="password"
-          id="passwordInput"
-          placeholder="Mot de passe"
-          required
-        />
-        <button type="submit" class="primary-btn">Se connecter</button>
-      </form>
-    </div>
-
-    <!-- Section 2: Interface principale (caché par défaut) -->
-    <div id="mainContent" style="display: none;">
+    <!-- Interface principale -->
+    <div id="mainContent">
       <!-- Header -->
       <header style="background: #a0826d; padding: 1rem; color: white;">
-        <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <a href="/admin.html" style="color: white; text-decoration: none; margin-right: 20px;">← Retour Admin</a>
-            <a href="/accounting.html" style="color: white; text-decoration: none; margin-right: 20px;">Recettes</a>
-            <strong>Dépenses</strong>
+        <div style="max-width: 1400px; margin: 0 auto;">
+          <div style="display: flex; gap: 15px;">
+            <a href="/admin.html" style="display: inline-block; padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 8px; font-size: 14px;">← Retour Admin</a>
+            <a href="/accounting.html" style="display: inline-block; padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 8px; font-size: 14px;">📊 Recettes</a>
+            <span style="display: inline-block; padding: 8px 16px; background: rgba(255,255,255,0.3); color: white; border-radius: 8px; font-size: 14px; font-weight: bold;">💰 Dépenses</span>
           </div>
-          <button id="logoutBtn" class="secondary-btn" style="background: rgba(255,255,255,0.2); color: white;">
-            Déconnexion
-          </button>
         </div>
       </header>
 

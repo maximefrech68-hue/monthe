@@ -1,21 +1,14 @@
 // Configuration
-const DEFAULT_PASSWORD_HASH = "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
 const ACHATS_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=ACHATS%20(Registre%20des%20d%C3%A9penses)";
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
 
-let ADMIN_PASSWORD_HASH = DEFAULT_PASSWORD_HASH;
 let allDepenses = [];
 let currentFile = null;
 
 // Elements DOM
-const loginScreen = document.getElementById("loginScreen");
 const mainContent = document.getElementById("mainContent");
-const loginForm = document.getElementById("loginForm");
-const passwordInput = document.getElementById("passwordInput");
-const errorMsg = document.getElementById("errorMsg");
-const logoutBtn = document.getElementById("logoutBtn");
 const depensesTableBody = document.getElementById("depensesTableBody");
 const totalEntries = document.getElementById("totalEntries");
 
@@ -38,55 +31,9 @@ const uploadArea = document.getElementById("uploadArea");
 const fileInput = document.getElementById("fileInput");
 const filePreview = document.getElementById("filePreview");
 
-// Hash SHA-256
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Récupérer le hash depuis Google Sheets
-async function fetchPasswordHash() {
-  try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getPasswordHash`, {
-      cache: "no-store",
-    });
-    const data = await res.json();
-    if (data.success && data.hash) {
-      ADMIN_PASSWORD_HASH = data.hash;
-    }
-  } catch (err) {
-    console.log("Utilisation du hash par défaut");
-  }
-}
-
-// Login
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const password = passwordInput.value;
-  const hash = await hashPassword(password);
-
-  await fetchPasswordHash();
-
-  if (hash === ADMIN_PASSWORD_HASH) {
-    loginScreen.style.display = "none";
-    mainContent.style.display = "block";
-    loadDepenses();
-  } else {
-    errorMsg.textContent = "Mot de passe incorrect";
-    errorMsg.style.display = "block";
-    passwordInput.value = "";
-  }
-});
-
-// Logout
-logoutBtn.addEventListener("click", () => {
-  mainContent.style.display = "none";
-  loginScreen.style.display = "block";
-  passwordInput.value = "";
-  errorMsg.style.display = "none";
+// Chargement automatique
+document.addEventListener("DOMContentLoaded", () => {
+  loadDepenses();
 });
 
 // Parser une ligne CSV
@@ -504,5 +451,3 @@ window.deleteDepense = async function(date, fournisseur) {
   }
 };
 
-// Init
-fetchPasswordHash();
