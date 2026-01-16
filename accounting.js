@@ -265,14 +265,20 @@ async function fetchVentesFromSheet() {
       });
 
       // Conversions numériques
-      v.montant_ht = Number(v.montant_ht || 0);
-      v.tva = Number(v.tva || 0);
-      v.montant_ttc = Number(v.montant_ttc || 0);
-      v.frais_paiement = Number(v.frais_paiement || 0);
-      v.net_encaisse = Number(v.net_encaisse || 0);
+      v.montant_ht = Number(v["Montant HT"] || 0);
+      v.tva = Number(v["TVA"] || 0);
+      v.montant_ttc = Number(v["Montant TTC"] || 0);
+      v.frais_paiement = Number(v["Frais paiement"] || 0);
+      v.net_encaisse = Number(v["Net encaissé"] || 0);
 
       // Garder la date brute
-      v.date_paiement = v.date_paiement || "";
+      v.date_paiement = v["Date paiement"] || "";
+      v.order_id = v["N° commande"] || "";
+      v.client = v["Client"] || "";
+      v.produits = v["Produit"] || "";
+      v.moyen_paiement = v["Moyen paiement"] || "";
+      v.plateforme = v["Plateforme"] || "";
+      v.url_facture = v["url_facture"] || "";
 
       return v;
     });
