@@ -164,7 +164,11 @@ function renderTable() {
 
   depensesTableBody.innerHTML = filtered
     .map(
-      (d, idx) => `
+      (d, idx) => {
+        const safeDate = (d.date || "").replace(/'/g, "\\'");
+        const safeFournisseur = (d.fournisseur || "").replace(/'/g, "\\'");
+
+        return `
       <tr>
         <td><input type="checkbox" data-index="${idx}" /></td>
         <td>${d.date || "-"}</td>
@@ -179,11 +183,12 @@ function renderTable() {
           ${d.justificatif ? `<a href="${d.justificatif}" target="_blank" class="justificatif-link">📄 Voir</a>` : "-"}
         </td>
         <td>
-          <button class="action-btn" onclick="editDepense('${d.date}', '${d.fournisseur}')">✏️ Modifier</button>
-          <button class="danger-btn" onclick="deleteDepense('${d.date}', '${d.fournisseur}')">🗑️</button>
+          <button class="action-btn" onclick="editDepense('${safeDate}', '${safeFournisseur}')">✏️ Modifier</button>
+          <button class="danger-btn" onclick="deleteDepense('${safeDate}', '${safeFournisseur}')">🗑️</button>
         </td>
       </tr>
-    `
+    `;
+      }
     )
     .join("");
 }
@@ -453,6 +458,8 @@ window.deleteDepense = async function(date, fournisseur) {
     return;
   }
 
+  console.log("Tentative de suppression:", { date, fournisseur, url: APPS_SCRIPT_URL });
+
   try {
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -464,7 +471,15 @@ window.deleteDepense = async function(date, fournisseur) {
       }),
     });
 
+    console.log("Réponse reçue:", response.status, response.statusText);
+
+    if (!response.ok) {
+      throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
+    }
+
     const result = await response.json();
+    console.log("Résultat:", result);
+
     if (result.success) {
       alert("Dépense supprimée !");
       location.reload();
@@ -472,7 +487,7 @@ window.deleteDepense = async function(date, fournisseur) {
       throw new Error(result.message || "Erreur inconnue");
     }
   } catch (error) {
-    console.error("Erreur:", error);
+    console.error("Erreur complète:", error);
     alert("Erreur lors de la suppression: " + error.message);
   }
 };
