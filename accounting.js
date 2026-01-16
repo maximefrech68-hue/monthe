@@ -264,12 +264,12 @@ async function fetchVentesFromSheet() {
         v[h] = values[i] ?? "";
       });
 
-      // Conversions numériques
-      v.montant_ht = Number(v["Montant HT"] || 0);
-      v.tva = Number(v["TVA"] || 0);
-      v.montant_ttc = Number(v["Montant TTC"] || 0);
-      v.frais_paiement = Number(v["Frais paiement"] || 0);
-      v.net_encaisse = Number(v["Net encaissé"] || 0);
+      // Conversions numériques (remplacer virgule par point pour format français)
+      v.montant_ht = Number(String(v["Montant HT"] || "0").replace(",", "."));
+      v.tva = Number(String(v["TVA"] || "0").replace(",", "."));
+      v.montant_ttc = Number(String(v["Montant TTC"] || "0").replace(",", "."));
+      v.frais_paiement = Number(String(v["Frais paiement"] || "0").replace(",", "."));
+      v.net_encaisse = Number(String(v["Net encaissé"] || "0").replace(",", "."));
 
       // Garder la date brute
       v.date_paiement = v["Date paiement"] || "";
