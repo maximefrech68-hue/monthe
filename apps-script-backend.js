@@ -211,6 +211,7 @@ function createVentesEntry(order, invoiceUrl) {
       "montant_ht",
       "tva",
       "montant_ttc",
+      "taux_tva",
       "moyen_paiement",
       "plateforme",
       "frais_paiement",
@@ -223,7 +224,7 @@ function createVentesEntry(order, invoiceUrl) {
     // Calculs
     const vat = calculateVAT(order.total_eur, VAT_RATE);
     const fees = calculateStripeFees(order.total_eur);
-    const net = order.total_eur - fees;
+    const net = vat.ht - fees; // Net = HT - frais (soit TTC - TVA - frais)
 
     // Concaténer les noms de produits
     const products = (order.items || [])
@@ -239,6 +240,7 @@ function createVentesEntry(order, invoiceUrl) {
       montant_ht: vat.ht,
       tva: vat.tva,
       montant_ttc: vat.ttc,
+      taux_tva: VAT_RATE * 100, // Stocker en pourcentage (ex: 20 pour 20%)
       moyen_paiement: "Stripe",
       plateforme: "Netlify",
       frais_paiement: fees,
@@ -308,35 +310,43 @@ function updateVenteEntry(orderId, updates) {
       throw new Error("Entrée VENTES non trouvée: " + orderId);
     }
 
-    // Mettre à jour les champs fournis
-    Object.keys(updates).forEach((field) => {
-      const colIndex = headers.indexOf(field);
-      if (colIndex !== -1) {
-        sheet.getRange(rowIndex, colIndex + 1).setValue(updates[field]);
-      }
-    });
+    // Récupérer les valeurs actuelles
+    const currentTTC = updates.montant_ttc !== undefined
+      ? Number(updates.montant_ttc)
+      : Number(data[rowIndex - 1][headers.indexOf("montant_ttc")] || 0);
 
-    // Si montant_ttc a été modifié, recalculer les champs dépendants
-    if (updates.montant_ttc !== undefined) {
-      const newTTC = Number(updates.montant_ttc);
-      const vat = calculateVAT(newTTC, VAT_RATE);
-      const fees = calculateStripeFees(newTTC);
-      const net = newTTC - fees;
+    const currentTauxTVA = updates.taux_tva !== undefined
+      ? Number(updates.taux_tva) / 100  // Convertir % en décimal
+      : Number(data[rowIndex - 1][headers.indexOf("taux_tva")] || VAT_RATE * 100) / 100;
 
-      const htColIndex = headers.indexOf("montant_ht");
-      const tvaColIndex = headers.indexOf("tva");
-      const feesColIndex = headers.indexOf("frais_paiement");
-      const netColIndex = headers.indexOf("net_encaisse");
+    const currentFrais = updates.frais_paiement !== undefined
+      ? Number(updates.frais_paiement)
+      : Number(data[rowIndex - 1][headers.indexOf("frais_paiement")] || 0);
 
-      if (htColIndex !== -1)
-        sheet.getRange(rowIndex, htColIndex + 1).setValue(vat.ht);
-      if (tvaColIndex !== -1)
-        sheet.getRange(rowIndex, tvaColIndex + 1).setValue(vat.tva);
-      if (feesColIndex !== -1)
-        sheet.getRange(rowIndex, feesColIndex + 1).setValue(fees);
-      if (netColIndex !== -1)
-        sheet.getRange(rowIndex, netColIndex + 1).setValue(net);
-    }
+    // Recalculer tous les champs dérivés
+    const vat = calculateVAT(currentTTC, currentTauxTVA);
+    const net = vat.ht - currentFrais; // Net = HT - frais
+
+    // Mettre à jour tous les champs
+    const htColIndex = headers.indexOf("montant_ht");
+    const tvaColIndex = headers.indexOf("tva");
+    const ttcColIndex = headers.indexOf("montant_ttc");
+    const tauxTvaColIndex = headers.indexOf("taux_tva");
+    const feesColIndex = headers.indexOf("frais_paiement");
+    const netColIndex = headers.indexOf("net_encaisse");
+
+    if (ttcColIndex !== -1)
+      sheet.getRange(rowIndex, ttcColIndex + 1).setValue(currentTTC);
+    if (tauxTvaColIndex !== -1)
+      sheet.getRange(rowIndex, tauxTvaColIndex + 1).setValue(currentTauxTVA * 100);
+    if (feesColIndex !== -1)
+      sheet.getRange(rowIndex, feesColIndex + 1).setValue(currentFrais);
+    if (htColIndex !== -1)
+      sheet.getRange(rowIndex, htColIndex + 1).setValue(vat.ht);
+    if (tvaColIndex !== -1)
+      sheet.getRange(rowIndex, tvaColIndex + 1).setValue(vat.tva);
+    if (netColIndex !== -1)
+      sheet.getRange(rowIndex, netColIndex + 1).setValue(net);
 
     Logger.log("Entrée VENTES mise à jour: " + orderId);
     return createResponse(true, "Entrée mise à jour avec succès", { orderId });
