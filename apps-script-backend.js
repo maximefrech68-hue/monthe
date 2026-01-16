@@ -5,8 +5,7 @@
 
 const OWNER_EMAIL = "maxime.frech.68@gmail.com";
 const SHOP_NAME = "MonThé";
-const LOGO_URL =
-  "https://drive.google.com/uc?export=view&id=1YIzBCrbPzZs_ujW3sfKrz7nUnGu-2Ub9";
+const LOGO_FILE_ID = "1YIzBCrbPzZs_ujW3sfKrz7nUnGu-2Ub9"; // ID du fichier logo dans Google Drive
 
 /**
  * Fonction GET - pour tester que le web app fonctionne et récupérer le hash
@@ -189,13 +188,34 @@ function formatEuroFR(num) {
 }
 
 /**
+ * Récupère le logo depuis Google Drive et le convertit en base64
+ * @param {string} fileId - ID du fichier logo dans Drive
+ * @returns {string} Data URI base64 de l'image ou chaîne vide si erreur
+ */
+function getLogoAsBase64(fileId) {
+  try {
+    const file = DriveApp.getFileById(fileId);
+    const blob = file.getBlob();
+    const base64 = Utilities.base64Encode(blob.getBytes());
+    const mimeType = blob.getContentType();
+    return `data:${mimeType};base64,${base64}`;
+  } catch (err) {
+    Logger.log("Erreur chargement logo: " + err.message);
+    return "";
+  }
+}
+
+/**
  * Génère le HTML de la facture
  * @param {Object} order - Données de commande
- * @param {string} logoUrl - URL du logo MonThé
+ * @param {string} logoFileId - ID du fichier logo dans Drive
  * @returns {string} HTML de la facture
  */
-function generateInvoiceHTML(order, logoUrl) {
+function generateInvoiceHTML(order, logoFileId) {
   const VAT_RATE = 0.2;
+
+  // Charger le logo en base64
+  const logoBase64 = logoFileId ? getLogoAsBase64(logoFileId) : "";
 
   // Calculer les totaux
   let totalHT = 0;
@@ -360,7 +380,7 @@ function generateInvoiceHTML(order, logoUrl) {
       <div class="invoice-container">
         <div class="header">
           <div class="header-left">
-            ${logoUrl ? `<img src="${logoUrl}" alt="MonThé" class="logo">` : ""}
+            ${logoBase64 ? `<img src="${logoBase64}" alt="MonThé" class="logo">` : ""}
             <div style="font-size: 18pt; font-weight: bold; margin-bottom: 5px;">${SHOP_NAME}</div>
             <div class="company-info">
               ${OWNER_EMAIL}
@@ -448,11 +468,11 @@ function generatePDFFromHTML(htmlContent, filename) {
 /**
  * Génère la facture PDF pour une commande
  * @param {Object} order - Données de commande
- * @param {string} logoUrl - URL du logo (optionnel)
+ * @param {string} logoFileId - ID du fichier logo dans Drive (optionnel)
  * @returns {Blob} PDF blob de la facture
  */
-function generateInvoicePDF(order, logoUrl) {
-  const html = generateInvoiceHTML(order, logoUrl);
+function generateInvoicePDF(order, logoFileId) {
+  const html = generateInvoiceHTML(order, logoFileId);
   const filename = `Facture_${order.order_ref}.pdf`;
   return generatePDFFromHTML(html, filename);
 }
@@ -470,7 +490,7 @@ function sendOrderEmails(order) {
   // Générer la facture PDF
   let pdfAttachment = null;
   try {
-    pdfAttachment = generateInvoicePDF(order, LOGO_URL);
+    pdfAttachment = generateInvoicePDF(order, LOGO_FILE_ID);
     Logger.log("Facture PDF générée: " + order.order_ref);
   } catch (pdfErr) {
     Logger.log("Erreur génération PDF: " + (pdfErr.message || pdfErr));
@@ -1089,7 +1109,7 @@ function testGenerateInvoicePDF() {
   };
 
   try {
-    const pdf = generateInvoicePDF(fakeOrder, LOGO_URL);
+    const pdf = generateInvoicePDF(fakeOrder, LOGO_FILE_ID);
     Logger.log("PDF généré avec succès: " + pdf.getName());
     Logger.log("Taille: " + pdf.getBytes().length + " octets");
 
