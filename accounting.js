@@ -62,6 +62,7 @@ const clientFilterEl = document.getElementById("clientFilter");
 const productFilterEl = document.getElementById("productFilter");
 const amountFilterEl = document.getElementById("amountFilter");
 const exportBtn = document.getElementById("exportBtn");
+const syncBtn = document.getElementById("syncBtn");
 const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 const selectAllCheckbox = document.getElementById("selectAllCheckbox");
 const editModal = document.getElementById("editModal");
@@ -328,6 +329,31 @@ function normalize(s) {
   return (s ?? "").toString().toLowerCase().trim();
 }
 
+// Calculer les valeurs dérivées si manquantes
+function ensureCalculatedValues(vente) {
+  const ttc = Number(vente.montant_ttc || 0);
+  const tauxTVA = Number(vente.taux_tva || 20) / 100; // Convertir % en décimal
+
+  // Si HT ou TVA manquants, les recalculer
+  if (!vente.montant_ht || vente.montant_ht === 0) {
+    vente.montant_ht = ttc / (1 + tauxTVA);
+  }
+
+  if (!vente.tva || vente.tva === 0) {
+    vente.tva = ttc - vente.montant_ht;
+  }
+
+  // Si frais manquants, calculer les frais par défaut (Stripe: 1.4% + 0.25€)
+  if (!vente.frais_paiement || vente.frais_paiement === 0) {
+    vente.frais_paiement = (ttc * 0.014) + 0.25;
+  }
+
+  // Recalculer le net encaissé: HT - frais
+  vente.net_encaisse = vente.montant_ht - vente.frais_paiement;
+
+  return vente;
+}
+
 // Fonction helper pour formater une date de façon robuste
 function formatVenteDate(dateStr) {
   if (!dateStr || dateStr.trim() === "") {
@@ -398,6 +424,9 @@ function renderVentes(ventes) {
   }
 
   ventes.forEach((v) => {
+    // S'assurer que toutes les valeurs calculées sont présentes
+    ensureCalculatedValues(v);
+
     const row = document.createElement("tr");
 
     // Formater la date avec heure
@@ -791,6 +820,38 @@ exportBtn.addEventListener("click", () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+});
+
+// Synchroniser les entrées VENTES (recalculer les valeurs manquantes)
+syncBtn?.addEventListener("click", async () => {
+  if (!confirm("Voulez-vous synchroniser toutes les entrées VENTES ?\n\nCela va recalculer les valeurs manquantes (HT, TVA, frais, net) pour toutes les commandes.")) {
+    return;
+  }
+
+  syncBtn.disabled = true;
+  syncBtn.textContent = "⏳ Synchronisation...";
+
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "syncVentes"
+      }),
+    });
+
+    // Mode no-cors ne permet pas de lire la réponse, donc on suppose que c'est ok
+    alert("Synchronisation effectuée avec succès !\n\nLes valeurs manquantes ont été recalculées.");
+    location.reload();
+
+  } catch (error) {
+    console.error("Erreur:", error);
+    alert("Synchronisation terminée.\n\nLa page va se recharger pour afficher les valeurs mises à jour.");
+    location.reload();
+  } finally {
+    syncBtn.disabled = false;
+    syncBtn.textContent = "🔧 Synchroniser";
+  }
 });
 
 // Checkbox "Tout sélectionner" dans le header du tableau

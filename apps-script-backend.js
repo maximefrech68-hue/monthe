@@ -58,6 +58,8 @@ function doPost(e) {
       return updateVenteEntry(data.order_id, data.updates);
     } else if (action === "deleteVente") {
       return deleteVenteEntry(data.order_id);
+    } else if (action === "syncVentes") {
+      return syncAllVentesEntries();
     } else if (data.order_id || data.order_ref || data.email) {
       // Si pas d'action mais qu'on a des infos de commande, c'est une commande
       return handleOrder(data);
@@ -359,6 +361,80 @@ function updateVenteEntry(orderId, updates) {
     return createResponse(true, "Entrée mise à jour avec succès", { orderId });
   } catch (error) {
     Logger.log("Erreur updateVenteEntry: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/**
+ * Synchronise toutes les entrées VENTES: recalcule les valeurs manquantes
+ * @returns {Object} Résultat de l'opération
+ */
+function syncAllVentesEntries() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("VENTES");
+
+    if (!sheet) {
+      throw new Error("La feuille 'VENTES' n'existe pas");
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    // Index des colonnes
+    const ttcColIndex = headers.indexOf("montant_ttc");
+    const htColIndex = headers.indexOf("montant_ht");
+    const tvaColIndex = headers.indexOf("tva");
+    const tauxTvaColIndex = headers.indexOf("taux_tva");
+    const feesColIndex = headers.indexOf("frais_paiement");
+    const netColIndex = headers.indexOf("net_encaisse");
+
+    let updatedCount = 0;
+
+    // Parcourir toutes les lignes (en commençant à 1 pour éviter les headers)
+    for (let i = 1; i < data.length; i++) {
+      const rowIndex = i + 1; // +1 car getRange est 1-indexed
+      const row = data[i];
+
+      const currentTTC = Number(row[ttcColIndex] || 0);
+      const currentTauxTVA = Number(row[tauxTvaColIndex] || VAT_RATE * 100) / 100;
+      const currentFrais = Number(row[feesColIndex] || 0);
+      const currentHT = Number(row[htColIndex] || 0);
+      const currentTVA = Number(row[tvaColIndex] || 0);
+      const currentNet = Number(row[netColIndex] || 0);
+
+      // Recalculer les valeurs
+      const vat = calculateVAT(currentTTC, currentTauxTVA);
+      const fees = currentFrais > 0 ? currentFrais : calculateStripeFees(currentTTC);
+      const net = vat.ht - fees;
+
+      // Vérifier si des valeurs doivent être mises à jour
+      const needsUpdate =
+        currentHT === 0 || currentTVA === 0 || currentFrais === 0 ||
+        currentNet === 0 || Math.abs(currentNet - net) > 0.01;
+
+      if (needsUpdate && currentTTC > 0) {
+        // Mettre à jour les valeurs calculées
+        if (htColIndex !== -1)
+          sheet.getRange(rowIndex, htColIndex + 1).setValue(vat.ht);
+        if (tvaColIndex !== -1)
+          sheet.getRange(rowIndex, tvaColIndex + 1).setValue(vat.tva);
+        if (tauxTvaColIndex !== -1 && row[tauxTvaColIndex] === "")
+          sheet.getRange(rowIndex, tauxTvaColIndex + 1).setValue(VAT_RATE * 100);
+        if (feesColIndex !== -1 && currentFrais === 0)
+          sheet.getRange(rowIndex, feesColIndex + 1).setValue(fees);
+        if (netColIndex !== -1)
+          sheet.getRange(rowIndex, netColIndex + 1).setValue(net);
+
+        updatedCount++;
+      }
+    }
+
+    Logger.log(`Synchronisation VENTES: ${updatedCount} entrée(s) mise(s) à jour`);
+    return createResponse(true, `${updatedCount} entrée(s) synchronisée(s)`, { updatedCount });
+
+  } catch (error) {
+    Logger.log("Erreur syncAllVentesEntries: " + error);
     return createResponse(false, error.toString());
   }
 }
