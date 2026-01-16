@@ -6,7 +6,7 @@
 const OWNER_EMAIL = "maxime.frech.68@gmail.com";
 const SHOP_NAME = "MonThé";
 const LOGO_URL =
-  "https://drive.google.com/thumbnail?id=1YIzBCrbPzZs_ujW3sfKrz7nUnGu-2Ub9&sz=w1000";
+  "https://drive.google.com/uc?export=view&id=1YIzBCrbPzZs_ujW3sfKrz7nUnGu-2Ub9";
 
 /**
  * Fonction GET - pour tester que le web app fonctionne et récupérer le hash
