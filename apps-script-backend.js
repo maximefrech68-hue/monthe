@@ -206,19 +206,19 @@ function createVentesEntry(order, invoiceUrl) {
       ss.getSheetByName("VENTES (Livre des recettes)") ||
       ss.insertSheet("VENTES (Livre des recettes)");
 
-    // Headers pour la feuille VENTES
+    // Headers pour la feuille VENTES (doivent correspondre exactement aux noms dans Sheets)
     const headersWanted = [
-      "date_paiement",
-      "order_id",
-      "client",
-      "produits",
-      "montant_ht",
-      "tva",
-      "montant_ttc",
-      "moyen_paiement",
-      "plateforme",
-      "frais_paiement",
-      "net_encaisse",
+      "Date paiement",
+      "N° commande",
+      "Client",
+      "Produit",
+      "Montant HT",
+      "TVA",
+      "Montant TTC",
+      "Moyen paiement",
+      "Plateforme",
+      "Frais paiement",
+      "Net encaissé",
       "url_facture",
     ];
 
@@ -236,24 +236,24 @@ function createVentesEntry(order, invoiceUrl) {
 
     // Construire la ligne
     const rowObj = {
-      date_paiement: order.date || new Date(),
-      order_id: order.order_id,
-      client: order.full_name || "",
-      produits: products,
-      montant_ht: vat.ht,
-      tva: vat.tva,
-      montant_ttc: vat.ttc,
-      moyen_paiement: "Stripe",
-      plateforme: "Netlify",
-      frais_paiement: fees,
-      net_encaisse: net,
-      url_facture: invoiceUrl || "",
+      "Date paiement": order.date || new Date(),
+      "N° commande": order.order_id,
+      "Client": order.full_name || "",
+      "Produit": products,
+      "Montant HT": vat.ht,
+      "TVA": vat.tva,
+      "Montant TTC": vat.ttc,
+      "Moyen paiement": "Stripe",
+      "Plateforme": "Netlify",
+      "Frais paiement": fees,
+      "Net encaissé": net,
+      "url_facture": invoiceUrl || "",
     };
 
     // Vérifier les doublons
-    const orderIdCol = headers.indexOf("order_id");
+    const orderIdCol = headers.indexOf("N° commande");
     if (orderIdCol === -1) {
-      throw new Error("Colonne 'order_id' introuvable dans VENTES");
+      throw new Error("Colonne 'N° commande' introuvable dans VENTES");
     }
 
     const existingRow = findRowByOrderRef(sh, order.order_id, orderIdCol);
@@ -1477,7 +1477,7 @@ function syncVentesFromOrders() {
     // Récupérer les order_id existants dans VENTES
     const ventesData = ventesSheet.getDataRange().getValues();
     const ventesHeaders = ventesData[0];
-    const ventesOrderIdIdx = ventesHeaders.indexOf("order_id");
+    const ventesOrderIdIdx = ventesHeaders.indexOf("N° commande");
 
     const existingVentesIds = new Set();
     for (let i = 1; i < ventesData.length; i++) {
