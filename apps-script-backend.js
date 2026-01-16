@@ -311,17 +311,22 @@ function updateVenteEntry(orderId, updates) {
     }
 
     // Récupérer les valeurs actuelles
-    const currentTTC = updates.montant_ttc !== undefined
-      ? Number(updates.montant_ttc)
-      : Number(data[rowIndex - 1][headers.indexOf("montant_ttc")] || 0);
+    const currentTTC =
+      updates.montant_ttc !== undefined
+        ? Number(updates.montant_ttc)
+        : Number(data[rowIndex - 1][headers.indexOf("montant_ttc")] || 0);
 
-    const currentTauxTVA = updates.taux_tva !== undefined
-      ? Number(updates.taux_tva) / 100  // Convertir % en décimal
-      : Number(data[rowIndex - 1][headers.indexOf("taux_tva")] || VAT_RATE * 100) / 100;
+    const currentTauxTVA =
+      updates.taux_tva !== undefined
+        ? Number(updates.taux_tva) / 100 // Convertir % en décimal
+        : Number(
+            data[rowIndex - 1][headers.indexOf("taux_tva")] || VAT_RATE * 100
+          ) / 100;
 
-    const currentFrais = updates.frais_paiement !== undefined
-      ? Number(updates.frais_paiement)
-      : Number(data[rowIndex - 1][headers.indexOf("frais_paiement")] || 0);
+    const currentFrais =
+      updates.frais_paiement !== undefined
+        ? Number(updates.frais_paiement)
+        : Number(data[rowIndex - 1][headers.indexOf("frais_paiement")] || 0);
 
     // Recalculer tous les champs dérivés
     const vat = calculateVAT(currentTTC, currentTauxTVA);
@@ -338,7 +343,9 @@ function updateVenteEntry(orderId, updates) {
     if (ttcColIndex !== -1)
       sheet.getRange(rowIndex, ttcColIndex + 1).setValue(currentTTC);
     if (tauxTvaColIndex !== -1)
-      sheet.getRange(rowIndex, tauxTvaColIndex + 1).setValue(currentTauxTVA * 100);
+      sheet
+        .getRange(rowIndex, tauxTvaColIndex + 1)
+        .setValue(currentTauxTVA * 100);
     if (feesColIndex !== -1)
       sheet.getRange(rowIndex, feesColIndex + 1).setValue(currentFrais);
     if (htColIndex !== -1)
