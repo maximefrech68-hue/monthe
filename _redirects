@@ -1,0 +1,8 @@
+# Redirections pour URLs sans .html
+/depenses    /depenses.html    200
+/admin       /admin.html       200
+/accounting  /accounting.html  200
+/orders      /orders.html      200
+/stock       /stock.html       200
+/checkout    /checkout.html    200
+/product     /product.html     200
