@@ -397,7 +397,8 @@ function syncAllVentesEntries() {
       const row = data[i];
 
       const currentTTC = Number(row[ttcColIndex] || 0);
-      const currentTauxTVA = Number(row[tauxTvaColIndex] || VAT_RATE * 100) / 100;
+      const currentTauxTVA =
+        Number(row[tauxTvaColIndex] || VAT_RATE * 100) / 100;
       const currentFrais = Number(row[feesColIndex] || 0);
       const currentHT = Number(row[htColIndex] || 0);
       const currentTVA = Number(row[tvaColIndex] || 0);
@@ -405,13 +406,17 @@ function syncAllVentesEntries() {
 
       // Recalculer les valeurs
       const vat = calculateVAT(currentTTC, currentTauxTVA);
-      const fees = currentFrais > 0 ? currentFrais : calculateStripeFees(currentTTC);
+      const fees =
+        currentFrais > 0 ? currentFrais : calculateStripeFees(currentTTC);
       const net = vat.ht - fees;
 
       // Vérifier si des valeurs doivent être mises à jour
       const needsUpdate =
-        currentHT === 0 || currentTVA === 0 || currentFrais === 0 ||
-        currentNet === 0 || Math.abs(currentNet - net) > 0.01;
+        currentHT === 0 ||
+        currentTVA === 0 ||
+        currentFrais === 0 ||
+        currentNet === 0 ||
+        Math.abs(currentNet - net) > 0.01;
 
       if (needsUpdate && currentTTC > 0) {
         // Mettre à jour les valeurs calculées
@@ -420,7 +425,9 @@ function syncAllVentesEntries() {
         if (tvaColIndex !== -1)
           sheet.getRange(rowIndex, tvaColIndex + 1).setValue(vat.tva);
         if (tauxTvaColIndex !== -1 && row[tauxTvaColIndex] === "")
-          sheet.getRange(rowIndex, tauxTvaColIndex + 1).setValue(VAT_RATE * 100);
+          sheet
+            .getRange(rowIndex, tauxTvaColIndex + 1)
+            .setValue(VAT_RATE * 100);
         if (feesColIndex !== -1 && currentFrais === 0)
           sheet.getRange(rowIndex, feesColIndex + 1).setValue(fees);
         if (netColIndex !== -1)
@@ -430,9 +437,12 @@ function syncAllVentesEntries() {
       }
     }
 
-    Logger.log(`Synchronisation VENTES: ${updatedCount} entrée(s) mise(s) à jour`);
-    return createResponse(true, `${updatedCount} entrée(s) synchronisée(s)`, { updatedCount });
-
+    Logger.log(
+      `Synchronisation VENTES: ${updatedCount} entrée(s) mise(s) à jour`
+    );
+    return createResponse(true, `${updatedCount} entrée(s) synchronisée(s)`, {
+      updatedCount,
+    });
   } catch (error) {
     Logger.log("Erreur syncAllVentesEntries: " + error);
     return createResponse(false, error.toString());
