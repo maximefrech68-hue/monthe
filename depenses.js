@@ -253,14 +253,19 @@ window.addEventListener("click", (e) => {
   }
 });
 
-// Calcul automatique TTC
-document.getElementById("depenseHT").addEventListener("input", calculateTTC);
-document.getElementById("depenseTVA").addEventListener("input", calculateTTC);
+// Calcul automatique TVA et TTC
+document.getElementById("depenseHT").addEventListener("input", calculateAmountsDepense);
+document.getElementById("depenseTauxTVA").addEventListener("input", calculateAmountsDepense);
 
-function calculateTTC() {
+function calculateAmountsDepense() {
   const ht = parseFloat(document.getElementById("depenseHT").value) || 0;
-  const tva = parseFloat(document.getElementById("depenseTVA").value) || 0;
-  document.getElementById("depenseTTC").value = (ht + tva).toFixed(2);
+  const tauxTVA = parseFloat(document.getElementById("depenseTauxTVA").value) || 0;
+
+  const montantTVA = ht * (tauxTVA / 100);
+  const ttc = ht + montantTVA;
+
+  document.getElementById("calculatedTVA").textContent = montantTVA.toFixed(2) + " €";
+  document.getElementById("calculatedTTC").textContent = ttc.toFixed(2) + " €";
 }
 
 // Upload de fichier
@@ -356,11 +361,12 @@ depenseForm.addEventListener("submit", async (e) => {
   const categorie = document.getElementById("depenseCategorie").value;
   const description = document.getElementById("depenseDescription").value;
   const ht = parseFloat(document.getElementById("depenseHT").value);
-  const tva = parseFloat(document.getElementById("depenseTVA").value);
-  const ttc = ht + tva;
+  const tauxTVA = parseFloat(document.getElementById("depenseTauxTVA").value);
+  const montantTVA = ht * (tauxTVA / 100);
+  const ttc = ht + montantTVA;
   const paiement = document.getElementById("depensePaiement").value;
 
-  if (!date || !fournisseur || !categorie || isNaN(ht) || isNaN(tva) || !paiement) {
+  if (!date || !fournisseur || !categorie || isNaN(ht) || isNaN(tauxTVA) || !paiement) {
     alert("Veuillez remplir tous les champs obligatoires.");
     return;
   }
@@ -377,7 +383,7 @@ depenseForm.addEventListener("submit", async (e) => {
     Catégorie: categorie,
     Description: description,
     HT: ht,
-    TVA: tva,
+    TVA: montantTVA,
     TTC: ttc,
     Paiement: paiement,
     Justificatif: justificatif
@@ -415,12 +421,18 @@ window.editDepense = function(date, fournisseur) {
   document.getElementById("depenseCategorie").value = depense.categorie;
   document.getElementById("depenseDescription").value = depense.description;
   document.getElementById("depenseHT").value = depense.montant_ht.toFixed(2);
-  document.getElementById("depenseTVA").value = depense.tva.toFixed(2);
-  document.getElementById("depenseTTC").value = depense.montant_ttc.toFixed(2);
+
+  // Calculer le taux de TVA à partir du montant TVA et HT
+  const tauxTVA = depense.montant_ht > 0 ? (depense.tva / depense.montant_ht) * 100 : 20;
+  document.getElementById("depenseTauxTVA").value = tauxTVA.toFixed(2);
+
   document.getElementById("depensePaiement").value = depense.paiement;
 
   currentFile = null;
   filePreview.style.display = "none";
+
+  // Déclencher le calcul automatique pour afficher TVA et TTC
+  calculateAmountsDepense();
 
   depenseModal.classList.remove("hidden");
 };
