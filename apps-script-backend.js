@@ -293,10 +293,10 @@ function updateVenteEntry(orderId, updates) {
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
 
-    // Trouver l'index de la colonne order_id
-    const orderIdColIndex = headers.indexOf("order_id");
+    // Trouver l'index de la colonne N° commande
+    const orderIdColIndex = headers.indexOf("N° commande");
     if (orderIdColIndex === -1) {
-      throw new Error("Colonne 'order_id' non trouvée");
+      throw new Error("Colonne 'N° commande' non trouvée");
     }
 
     // Trouver la ligne
@@ -320,17 +320,17 @@ function updateVenteEntry(orderId, updates) {
       }
     });
 
-    // Si montant_ttc a été modifié, recalculer les champs dépendants
-    if (updates.montant_ttc !== undefined) {
-      const newTTC = Number(updates.montant_ttc);
+    // Si Montant TTC a été modifié, recalculer les champs dépendants
+    if (updates["Montant TTC"] !== undefined) {
+      const newTTC = Number(updates["Montant TTC"]);
       const vat = calculateVAT(newTTC, VAT_RATE);
       const fees = calculateStripeFees(newTTC);
-      const net = newTTC - fees;
+      const net = vat.ht - fees;
 
-      const htColIndex = headers.indexOf("montant_ht");
-      const tvaColIndex = headers.indexOf("tva");
-      const feesColIndex = headers.indexOf("frais_paiement");
-      const netColIndex = headers.indexOf("net_encaisse");
+      const htColIndex = headers.indexOf("Montant HT");
+      const tvaColIndex = headers.indexOf("TVA");
+      const feesColIndex = headers.indexOf("Frais paiement");
+      const netColIndex = headers.indexOf("Net encaissé");
 
       if (htColIndex !== -1)
         sheet.getRange(rowIndex, htColIndex + 1).setValue(vat.ht);
@@ -368,10 +368,10 @@ function deleteVenteEntry(orderId) {
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
 
-    // Trouver l'index de la colonne order_id
-    const orderIdColIndex = headers.indexOf("order_id");
+    // Trouver l'index de la colonne N° commande
+    const orderIdColIndex = headers.indexOf("N° commande");
     if (orderIdColIndex === -1) {
-      throw new Error("Colonne 'order_id' non trouvée");
+      throw new Error("Colonne 'N° commande' non trouvée");
     }
 
     // Trouver la ligne
