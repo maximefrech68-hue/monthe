@@ -58,6 +58,8 @@ function doPost(e) {
       return updateVenteEntry(data.order_id, data.updates);
     } else if (action === "deleteVente") {
       return deleteVenteEntry(data.order_id);
+    } else if (action === "syncVentesFromOrders") {
+      return syncVentesFromOrders();
     } else if (data.order_id || data.order_ref || data.email) {
       // Si pas d'action mais qu'on a des infos de commande, c'est une commande
       return handleOrder(data);
@@ -1382,6 +1384,15 @@ function testUploadImage() {
 }
 
 /**
+ * Fonction de test pour synchroniser les entrées VENTES
+ * Exécuter manuellement depuis l'éditeur Google Apps Script
+ */
+function testSyncVentesFromOrders() {
+  const result = syncVentesFromOrders();
+  Logger.log(result.getContent());
+}
+
+/**
  * Fonction de test pour la génération de facture PDF
  */
 function testGenerateInvoicePDF() {
@@ -1431,5 +1442,118 @@ function testGenerateInvoicePDF() {
   } catch (err) {
     Logger.log("Erreur: " + err.message);
     return "Erreur: " + err.message;
+  }
+}
+
+/**
+ * Synchronise rétroactivement les entrées VENTES depuis les commandes Orders existantes
+ * @returns {Object} Résultat avec le nombre d'entrées créées
+ */
+function syncVentesFromOrders() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ordersSheet = ss.getSheetByName("Orders");
+    const ventesSheet = ss.getSheetByName("VENTES (Livre des recettes)");
+
+    if (!ordersSheet) {
+      throw new Error("La feuille 'Orders' n'existe pas");
+    }
+
+    if (!ventesSheet) {
+      throw new Error("La feuille 'VENTES (Livre des recettes)' n'existe pas");
+    }
+
+    // Récupérer toutes les commandes
+    const ordersData = ordersSheet.getDataRange().getValues();
+    const ordersHeaders = ordersData[0];
+
+    // Index des colonnes Orders
+    const orderIdIdx = ordersHeaders.indexOf("order_id");
+    const fullNameIdx = ordersHeaders.indexOf("full_name");
+    const itemsJsonIdx = ordersHeaders.indexOf("items_json");
+    const totalEurIdx = ordersHeaders.indexOf("total_eur");
+    const dateIdx = ordersHeaders.indexOf("date");
+
+    // Récupérer les order_id existants dans VENTES
+    const ventesData = ventesSheet.getDataRange().getValues();
+    const ventesHeaders = ventesData[0];
+    const ventesOrderIdIdx = ventesHeaders.indexOf("order_id");
+
+    const existingVentesIds = new Set();
+    for (let i = 1; i < ventesData.length; i++) {
+      existingVentesIds.add(ventesData[i][ventesOrderIdIdx]);
+    }
+
+    let createdCount = 0;
+    let skippedCount = 0;
+    let errorCount = 0;
+
+    // Parcourir les commandes
+    for (let i = 1; i < ordersData.length; i++) {
+      const row = ordersData[i];
+      const orderId = row[orderIdIdx];
+      const fullName = row[fullNameIdx] || "";
+      const itemsJsonStr = row[itemsJsonIdx] || "[]";
+      const totalEur = Number(String(row[totalEurIdx] || "0").replace(",", "."));
+      const date = row[dateIdx];
+
+      // Ignorer les commandes vides ou invalides
+      if (!orderId || totalEur <= 0) {
+        skippedCount++;
+        continue;
+      }
+
+      // Vérifier si l'entrée VENTES existe déjà
+      if (existingVentesIds.has(orderId)) {
+        skippedCount++;
+        continue;
+      }
+
+      // Parser les items
+      let items = [];
+      try {
+        items = JSON.parse(itemsJsonStr);
+      } catch (e) {
+        Logger.log("Erreur parsing items pour " + orderId + ": " + e.message);
+        errorCount++;
+        continue;
+      }
+
+      // Créer l'entrée VENTES
+      try {
+        const success = createVentesEntry(
+          {
+            order_id: orderId,
+            full_name: fullName,
+            items: items,
+            total_eur: totalEur,
+            date: date || new Date(),
+          },
+          "" // Pas d'URL de facture pour les anciennes commandes
+        );
+
+        if (success) {
+          createdCount++;
+          existingVentesIds.add(orderId);
+        } else {
+          errorCount++;
+        }
+      } catch (err) {
+        Logger.log("Erreur création VENTES pour " + orderId + ": " + err.message);
+        errorCount++;
+      }
+    }
+
+    const message = `Synchronisation terminée : ${createdCount} créée(s), ${skippedCount} ignorée(s), ${errorCount} erreur(s)`;
+    Logger.log(message);
+
+    return createResponse(true, message, {
+      created: createdCount,
+      skipped: skippedCount,
+      errors: errorCount
+    });
+  } catch (error) {
+    Logger.log("Erreur syncVentesFromOrders: " + error);
+    return createResponse(false, error.toString());
   }
 }
