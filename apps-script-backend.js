@@ -202,7 +202,7 @@ function handleOrder(data) {
 function createVentesEntry(order, invoiceUrl) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sh = ss.getSheetByName("VENTES (Livre des recettes)") || ss.insertSheet("VENTES (Livre des recettes)");
+    const sh = ss.getSheetByName("VENTES") || ss.insertSheet("VENTES");
 
     // Headers pour la feuille VENTES
     const headersWanted = [
@@ -283,10 +283,10 @@ function createVentesEntry(order, invoiceUrl) {
 function updateVenteEntry(orderId, updates) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("VENTES (Livre des recettes)");
+    const sheet = ss.getSheetByName("VENTES");
 
     if (!sheet) {
-      throw new Error("La feuille 'VENTES (Livre des recettes)' n'existe pas");
+      throw new Error("La feuille 'VENTES' n'existe pas");
     }
 
     // Récupérer les headers et data
@@ -372,10 +372,10 @@ function updateVenteEntry(orderId, updates) {
 function syncAllVentesEntries() {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("VENTES (Livre des recettes)");
+    const sheet = ss.getSheetByName("VENTES");
 
     if (!sheet) {
-      throw new Error("La feuille 'VENTES (Livre des recettes)' n'existe pas");
+      throw new Error("La feuille 'VENTES' n'existe pas");
     }
 
     const data = sheet.getDataRange().getValues();
@@ -457,10 +457,10 @@ function syncAllVentesEntries() {
 function deleteVenteEntry(orderId) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName("VENTES (Livre des recettes)");
+    const sheet = ss.getSheetByName("VENTES");
 
     if (!sheet) {
-      throw new Error("La feuille 'VENTES (Livre des recettes)' n'existe pas");
+      throw new Error("La feuille 'VENTES' n'existe pas");
     }
 
     // Récupérer les données
