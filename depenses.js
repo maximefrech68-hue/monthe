@@ -328,7 +328,6 @@ async function uploadFile(file) {
 
         const response = await fetch(APPS_SCRIPT_URL, {
           method: "POST",
-          mode: "no-cors",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "uploadImage",
@@ -338,16 +337,23 @@ async function uploadFile(file) {
           }),
         });
 
-        // Mode no-cors ne permet pas de lire la réponse
-        // On suppose que ça a fonctionné et on retourne une URL fictive
-        // Dans la vraie vie, il faudrait un proxy ou CORS activé
-        resolve(`https://drive.google.com/file/uploaded/${Date.now()}`);
+        if (!response.ok) {
+          throw new Error("Erreur lors de l'upload");
+        }
+
+        const result = await response.json();
+        if (result.success && result.driveUrl) {
+          resolve(result.driveUrl);
+        } else {
+          throw new Error(result.message || "Erreur inconnue");
+        }
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
   } catch (error) {
     console.error("Erreur upload:", error);
+    alert("Erreur lors de l'upload du fichier: " + error.message);
     return "";
   }
 }
@@ -390,9 +396,8 @@ depenseForm.addEventListener("submit", async (e) => {
   };
 
   try {
-    await fetch(APPS_SCRIPT_URL, {
+    const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "addDepense",
@@ -400,12 +405,17 @@ depenseForm.addEventListener("submit", async (e) => {
       }),
     });
 
-    alert("Dépense ajoutée avec succès !");
-    depenseModal.classList.add("hidden");
-    setTimeout(() => location.reload(), 500);
+    const result = await response.json();
+    if (result.success) {
+      alert("Dépense ajoutée avec succès !");
+      depenseModal.classList.add("hidden");
+      setTimeout(() => location.reload(), 500);
+    } else {
+      throw new Error(result.message || "Erreur inconnue");
+    }
   } catch (error) {
     console.error("Erreur:", error);
-    alert("Erreur lors de l'ajout de la dépense.");
+    alert("Erreur lors de l'ajout de la dépense: " + error.message);
   }
 });
 
@@ -444,9 +454,8 @@ window.deleteDepense = async function(date, fournisseur) {
   }
 
   try {
-    await fetch(APPS_SCRIPT_URL, {
+    const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "deleteDepense",
@@ -455,11 +464,16 @@ window.deleteDepense = async function(date, fournisseur) {
       }),
     });
 
-    alert("Dépense supprimée !");
-    location.reload();
+    const result = await response.json();
+    if (result.success) {
+      alert("Dépense supprimée !");
+      location.reload();
+    } else {
+      throw new Error(result.message || "Erreur inconnue");
+    }
   } catch (error) {
     console.error("Erreur:", error);
-    alert("Erreur lors de la suppression.");
+    alert("Erreur lors de la suppression: " + error.message);
   }
 };
 

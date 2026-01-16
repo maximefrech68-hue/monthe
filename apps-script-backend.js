@@ -922,7 +922,11 @@ function createResponse(success, message, additionalData = {}) {
       message: message,
       ...additionalData,
     })
-  ).setMimeType(ContentService.MimeType.JSON);
+  )
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader("Access-Control-Allow-Origin", "*")
+    .setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    .setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
 function addProductToSheet(productData) {
