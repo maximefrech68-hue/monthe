@@ -7,7 +7,6 @@ const OWNER_EMAIL = "maxime.frech.68@gmail.com";
 const SHOP_NAME = "MonThé";
 const LOGO_FILE_ID = "1YIzBCrbPzZs_ujW3sfKrz7nUnGu-2Ub9"; // ID du fichier logo dans Google Drive
 const INVOICE_FOLDER_ID = "1TwZkkYm0vdO8CQpIsNuS1qEr15As4aIT"; // Dossier Google Drive pour les factures
-const JUSTIFICATIF_FOLDER_ID = "1ozQC0gDq9upjZH7e24iqXf-Wyvo-gpMB"; // Dossier Google Drive pour les justificatifs de dépenses
 const VAT_RATE = 0.2; // Taux TVA 20%
 const STRIPE_FEE_PERCENT = 0.014; // 1.4%
 const STRIPE_FEE_FIXED = 0.25; // 0.25€
@@ -24,18 +23,6 @@ function doGet(e) {
   return ContentService.createTextOutput(
     "OK - Web App active ✅ (orders + emails + products)"
   ).setMimeType(ContentService.MimeType.TEXT);
-}
-
-/**
- * Gère les requêtes OPTIONS (CORS preflight)
- */
-function doOptions(e) {
-  return ContentService.createTextOutput("")
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeader("Access-Control-Allow-Origin", "*")
-    .setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    .setHeader("Access-Control-Allow-Headers", "Content-Type")
-    .setHeader("Access-Control-Max-Age", "86400");
 }
 
 /**
@@ -57,8 +44,6 @@ function doPost(e) {
       return deleteProductFromSheet(data.id);
     } else if (action === "uploadImage") {
       return uploadImageToDrive(data.fileName, data.mimeType, data.base64Data);
-    } else if (action === "uploadJustificatif") {
-      return uploadJustificatifToDrive(data.fileName, data.mimeType, data.base64Data);
     } else if (action === "deleteOrder") {
       return deleteOrderFromSheet(data.order_id);
     } else if (action === "updateStock") {
@@ -334,17 +319,20 @@ function updateVenteEntry(orderId, updates) {
     }
 
     // Récupérer les valeurs actuelles ou mises à jour
-    const newTTC = updates["Montant TTC"] !== undefined
-      ? Number(updates["Montant TTC"])
-      : Number(data[rowIndex - 1][headers.indexOf("Montant TTC")] || 0);
+    const newTTC =
+      updates["Montant TTC"] !== undefined
+        ? Number(updates["Montant TTC"])
+        : Number(data[rowIndex - 1][headers.indexOf("Montant TTC")] || 0);
 
-    const tauxTVA = updates["taux_tva"] !== undefined
-      ? Number(updates["taux_tva"]) / 100 // Convertir % en décimal
-      : VAT_RATE; // Par défaut 20%
+    const tauxTVA =
+      updates["taux_tva"] !== undefined
+        ? Number(updates["taux_tva"]) / 100 // Convertir % en décimal
+        : VAT_RATE; // Par défaut 20%
 
-    const frais = updates["Frais paiement"] !== undefined
-      ? Number(updates["Frais paiement"])
-      : Number(data[rowIndex - 1][headers.indexOf("Frais paiement")] || 0);
+    const frais =
+      updates["Frais paiement"] !== undefined
+        ? Number(updates["Frais paiement"])
+        : Number(data[rowIndex - 1][headers.indexOf("Frais paiement")] || 0);
 
     // Recalculer tous les champs dérivés
     const vat = calculateVAT(newTTC, tauxTVA);
@@ -937,11 +925,7 @@ function createResponse(success, message, additionalData = {}) {
       message: message,
       ...additionalData,
     })
-  )
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeader("Access-Control-Allow-Origin", "*")
-    .setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    .setHeader("Access-Control-Allow-Headers", "Content-Type");
+  ).setMimeType(ContentService.MimeType.JSON);
 }
 
 function addProductToSheet(productData) {
@@ -1286,48 +1270,6 @@ function uploadImageToDrive(fileName, mimeType, base64Data) {
   }
 }
 
-/**
- * Upload un justificatif de dépense vers le dossier Google Drive spécifique
- * @param {string} fileName - Nom du fichier
- * @param {string} mimeType - Type MIME du fichier
- * @param {string} base64Data - Données du fichier en base64
- * @returns {Object} Résultat avec l'URL du fichier
- */
-function uploadJustificatifToDrive(fileName, mimeType, base64Data) {
-  try {
-    // Récupérer le dossier de destination
-    const folder = DriveApp.getFolderById(JUSTIFICATIF_FOLDER_ID);
-
-    // Décoder le base64
-    const blob = Utilities.newBlob(
-      Utilities.base64Decode(base64Data),
-      mimeType,
-      fileName
-    );
-
-    // Créer le fichier dans le dossier
-    const file = folder.createFile(blob);
-
-    // Rendre le fichier accessible avec le lien
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-    // Obtenir l'URL publique
-    const fileId = file.getId();
-    const fileUrl = file.getUrl();
-
-    Logger.log("Justificatif uploadé: " + fileName + " -> " + fileUrl);
-
-    return createResponse(true, "Justificatif téléchargé avec succès", {
-      url: fileUrl,
-      fileId: fileId,
-      fileName: fileName,
-    });
-  } catch (error) {
-    Logger.log("Erreur uploadJustificatifToDrive: " + error);
-    return createResponse(false, error.toString());
-  }
-}
-
 /* ==================== CHANGEMENT DE MOT DE PASSE ==================== */
 
 function changePasswordHash(oldPasswordHash, newPasswordHash) {
@@ -1530,7 +1472,9 @@ function addDepenseToSheet(depenseData) {
     const sheet = ss.getSheetByName("ACHATS (Registre des dépenses)");
 
     if (!sheet) {
-      throw new Error("La feuille 'ACHATS (Registre des dépenses)' n'existe pas");
+      throw new Error(
+        "La feuille 'ACHATS (Registre des dépenses)' n'existe pas"
+      );
     }
 
     // Headers pour la feuille ACHATS
@@ -1543,22 +1487,22 @@ function addDepenseToSheet(depenseData) {
       "TVA",
       "TTC",
       "Paiement",
-      "Justificatif"
+      "Justificatif",
     ];
 
     const headers = ensureHeaders(sheet, headersWanted);
 
     // Construire la ligne
     const rowObj = {
-      "Date": depenseData.Date || new Date(),
-      "Fournisseur": depenseData.Fournisseur || "",
-      "Catégorie": depenseData.Catégorie || "",
-      "Description": depenseData.Description || "",
-      "HT": Number(depenseData.HT || 0),
-      "TVA": Number(depenseData.TVA || 0),
-      "TTC": Number(depenseData.TTC || 0),
-      "Paiement": depenseData.Paiement || "",
-      "Justificatif": depenseData.Justificatif || ""
+      Date: depenseData.Date || new Date(),
+      Fournisseur: depenseData.Fournisseur || "",
+      Catégorie: depenseData.Catégorie || "",
+      Description: depenseData.Description || "",
+      HT: Number(depenseData.HT || 0),
+      TVA: Number(depenseData.TVA || 0),
+      TTC: Number(depenseData.TTC || 0),
+      Paiement: depenseData.Paiement || "",
+      Justificatif: depenseData.Justificatif || "",
     };
 
     // Ajouter la ligne
@@ -1567,7 +1511,7 @@ function addDepenseToSheet(depenseData) {
 
     Logger.log("Dépense ajoutée: " + depenseData.Fournisseur);
     return createResponse(true, "Dépense ajoutée avec succès", {
-      fournisseur: depenseData.Fournisseur
+      fournisseur: depenseData.Fournisseur,
     });
   } catch (error) {
     Logger.log("Erreur addDepenseToSheet: " + error);
@@ -1588,7 +1532,9 @@ function updateDepenseEntry(date, fournisseur, updates) {
     const sheet = ss.getSheetByName("ACHATS (Registre des dépenses)");
 
     if (!sheet) {
-      throw new Error("La feuille 'ACHATS (Registre des dépenses)' n'existe pas");
+      throw new Error(
+        "La feuille 'ACHATS (Registre des dépenses)' n'existe pas"
+      );
     }
 
     // Récupérer les données
@@ -1606,7 +1552,10 @@ function updateDepenseEntry(date, fournisseur, updates) {
     // Trouver la ligne
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      if (data[i][dateColIndex] === date && data[i][fournisseurColIndex] === fournisseur) {
+      if (
+        data[i][dateColIndex] === date &&
+        data[i][fournisseurColIndex] === fournisseur
+      ) {
         rowIndex = i + 1; // +1 car getRange est 1-indexed
         break;
       }
@@ -1627,7 +1576,7 @@ function updateDepenseEntry(date, fournisseur, updates) {
     Logger.log("Dépense mise à jour: " + date + " - " + fournisseur);
     return createResponse(true, "Dépense mise à jour avec succès", {
       date: date,
-      fournisseur: fournisseur
+      fournisseur: fournisseur,
     });
   } catch (error) {
     Logger.log("Erreur updateDepenseEntry: " + error);
@@ -1647,7 +1596,9 @@ function deleteDepenseEntry(date, fournisseur) {
     const sheet = ss.getSheetByName("ACHATS (Registre des dépenses)");
 
     if (!sheet) {
-      throw new Error("La feuille 'ACHATS (Registre des dépenses)' n'existe pas");
+      throw new Error(
+        "La feuille 'ACHATS (Registre des dépenses)' n'existe pas"
+      );
     }
 
     // Récupérer les données
@@ -1662,18 +1613,13 @@ function deleteDepenseEntry(date, fournisseur) {
       throw new Error("Colonnes 'Date' ou 'Fournisseur' non trouvées");
     }
 
-    // Trouver la ligne (comparaison flexible pour les dates)
+    // Trouver la ligne
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      const rowDate = data[i][dateColIndex];
-      const rowFournisseur = data[i][fournisseurColIndex];
-
-      // Normaliser les dates pour comparaison
-      const dateMatch = String(rowDate).trim() === String(date).trim() ||
-                       new Date(rowDate).toISOString().split('T')[0] === String(date).trim();
-      const fournisseurMatch = String(rowFournisseur).trim() === String(fournisseur).trim();
-
-      if (dateMatch && fournisseurMatch) {
+      if (
+        data[i][dateColIndex] === date &&
+        data[i][fournisseurColIndex] === fournisseur
+      ) {
         rowIndex = i + 1; // +1 car deleteRow est 1-indexed
         break;
       }
@@ -1689,7 +1635,7 @@ function deleteDepenseEntry(date, fournisseur) {
     Logger.log("Dépense supprimée: " + date + " - " + fournisseur);
     return createResponse(true, "Dépense supprimée avec succès", {
       date: date,
-      fournisseur: fournisseur
+      fournisseur: fournisseur,
     });
   } catch (error) {
     Logger.log("Erreur deleteDepenseEntry: " + error);
