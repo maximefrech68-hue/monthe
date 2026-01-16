@@ -1605,10 +1605,18 @@ function deleteDepenseEntry(date, fournisseur) {
       throw new Error("Colonnes 'Date' ou 'Fournisseur' non trouvées");
     }
 
-    // Trouver la ligne
+    // Trouver la ligne (comparaison flexible pour les dates)
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      if (data[i][dateColIndex] === date && data[i][fournisseurColIndex] === fournisseur) {
+      const rowDate = data[i][dateColIndex];
+      const rowFournisseur = data[i][fournisseurColIndex];
+
+      // Normaliser les dates pour comparaison
+      const dateMatch = String(rowDate).trim() === String(date).trim() ||
+                       new Date(rowDate).toISOString().split('T')[0] === String(date).trim();
+      const fournisseurMatch = String(rowFournisseur).trim() === String(fournisseur).trim();
+
+      if (dateMatch && fournisseurMatch) {
         rowIndex = i + 1; // +1 car deleteRow est 1-indexed
         break;
       }
