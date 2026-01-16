@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Comptabilité - MonThé</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .login-screen {
+        max-width: 400px;
+        margin: 4rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      }
+
+      .login-form {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .login-form input {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #d9d2c7;
+        font-size: 16px;
+      }
+
+      .error-msg {
+        background: #fee;
+        color: #c00;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+      }
+
+      .accounting-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        margin-top: 1rem;
+      }
+
+      .accounting-table th {
+        background: #a0826d;
+        color: white;
+        padding: 12px 8px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      .accounting-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #e0e0e0;
+        font-size: 14px;
+      }
+
+      .accounting-table tr:hover {
+        background: #f7f4ef;
+      }
+
+      .accounting-table th:nth-child(5),
+      .accounting-table th:nth-child(6),
+      .accounting-table th:nth-child(7),
+      .accounting-table th:nth-child(8),
+      .accounting-table th:nth-child(11),
+      .accounting-table th:nth-child(12),
+      .accounting-table td:nth-child(5),
+      .accounting-table td:nth-child(6),
+      .accounting-table td:nth-child(7),
+      .accounting-table td:nth-child(8),
+      .accounting-table td:nth-child(11),
+      .accounting-table td:nth-child(12) {
+        text-align: right;
+      }
+
+      .btn-edit,
+      .btn-delete {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        margin-right: 4px;
+      }
+
+      .btn-edit {
+        background: #a0826d;
+        color: white;
+      }
+
+      .btn-edit:hover {
+        background: #8d7160;
+      }
+
+      .btn-delete {
+        background: #b00020;
+        color: white;
+      }
+
+      .btn-delete:hover {
+        background: #900018;
+      }
+
+      .download-link {
+        color: #a0826d;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .download-link:hover {
+        text-decoration: underline;
+      }
+
+      .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+      }
+
+      .modal-content {
+        background: white;
+        margin: 5% auto;
+        padding: 20px;
+        border-radius: 14px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+
+      .close {
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #666;
+      }
+
+      .close:hover {
+        color: #000;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #2b2b2b;
+      }
+
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #d9d2c7;
+        font-size: 14px;
+      }
+
+      .export-btn,
+      .reset-btn {
+        background: #4a7c59;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 600;
+        margin-right: 8px;
+      }
+
+      .export-btn:hover,
+      .reset-btn:hover {
+        background: #3d6a4a;
+      }
+
+      .reset-btn {
+        background: #666;
+      }
+
+      .reset-btn:hover {
+        background: #555;
+      }
+
+      @media (max-width: 768px) {
+        .accounting-table {
+          font-size: 12px;
+        }
+
+        .accounting-table th,
+        .accounting-table td {
+          padding: 8px 4px;
+        }
+
+        .btn-edit,
+        .btn-delete {
+          padding: 4px 8px;
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Écran de connexion -->
+    <div id="loginScreen" class="login-screen">
+      <h2>Comptabilité - MonThé</h2>
+      <div id="loginError" class="error-msg"></div>
+      <form id="loginForm" class="login-form">
+        <input
+          type="password"
+          id="password"
+          placeholder="Mot de passe"
+          required
+          autocomplete="current-password"
+        />
+        <button type="submit" class="primary-btn">Se connecter</button>
+      </form>
+    </div>
+
+    <!-- Interface comptabilité (cachée par défaut) -->
+    <div id="accountingPanel" class="hidden">
+      <div class="topbar">
+        <a href="admin.html" class="btn-back">← Retour Admin</a>
+        <button id="logoutBtn" class="logout-btn">Déconnexion</button>
+      </div>
+
+      <header>
+        <h1>MonThé - Comptabilité</h1>
+        <p>Livre des recettes (VENTES)</p>
+        <p id="ventesCount" style="font-size: 14px; color: #ff8c00; margin-top: 0.5rem;">
+          <strong id="ventesCountNumber">0</strong> entrée(s)
+        </p>
+      </header>
+
+      <main>
+        <!-- Toolbar filtres -->
+        <section class="toolbar">
+          <input
+            id="search"
+            type="text"
+            placeholder="Rechercher par N° commande, client, produit..."
+          />
+
+          <select id="dateFilter">
+            <option value="">Toutes les dates</option>
+            <option value="today">Aujourd'hui</option>
+            <option value="week">Cette semaine</option>
+            <option value="month">Ce mois</option>
+          </select>
+
+          <select id="clientFilter">
+            <option value="">Tous les clients</option>
+          </select>
+
+          <select id="productFilter">
+            <option value="">Tous les produits</option>
+          </select>
+
+          <select id="amountFilter">
+            <option value="">Tous les montants</option>
+            <option value="0-50">0-50€</option>
+            <option value="50-100">50-100€</option>
+            <option value="100-200">100-200€</option>
+            <option value="200+">200€+</option>
+          </select>
+
+          <button id="resetFiltersBtn" class="reset-btn">🔄 Réinitialiser</button>
+          <button id="exportBtn" class="export-btn">📥 Exporter CSV</button>
+        </section>
+
+        <!-- Section 4: Table comptabilité avec 14 colonnes -->
+        <section class="accounting-container" style="padding: 2rem; overflow-x: auto;">
+          <table id="accountingTable" class="accounting-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;">
+                  <input type="checkbox" id="selectAllCheckbox" title="Tout sélectionner" />
+                </th>
+                <th style="min-width: 140px;">Date Paiement</th>
+                <th style="min-width: 120px;">N° Commande</th>
+                <th style="min-width: 150px;">Client</th>
+                <th style="min-width: 200px;">Produits</th>
+                <th style="min-width: 90px;">Montant HT</th>
+                <th style="min-width: 80px;">TVA</th>
+                <th style="min-width: 100px;">Montant TTC</th>
+                <th style="min-width: 100px;">Moyen</th>
+                <th style="min-width: 100px;">Plateforme</th>
+                <th style="min-width: 90px;">Frais</th>
+                <th style="min-width: 100px;">Net Encaissé</th>
+                <th style="min-width: 100px;">Facture</th>
+                <th style="min-width: 150px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="accountingBody">
+              <!-- Lignes injectées dynamiquement par accounting.js -->
+            </tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+
+    <!-- Section 5: Modal d'édition des entrées comptables -->
+    <div id="editModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close" id="closeModal">&times;</span>
+        <h2>Modifier l'entrée comptable</h2>
+
+        <form id="editForm">
+          <input type="hidden" id="editOrderId" />
+
+          <div class="form-group">
+            <label for="editClient">Client *</label>
+            <input
+              type="text"
+              id="editClient"
+              placeholder="Nom du client"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="editMontantTTC">Montant TTC (€) *</label>
+            <input
+              type="number"
+              id="editMontantTTC"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              required
+            />
+            <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
+              Les montants HT, TVA, frais et net seront recalculés automatiquement
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="editMoyenPaiement">Moyen de paiement *</label>
+            <select id="editMoyenPaiement" required>
+              <option value="">-- Sélectionner --</option>
+              <option value="Stripe">Stripe</option>
+              <option value="PayPal">PayPal</option>
+              <option value="Virement">Virement</option>
+              <option value="Chèque">Chèque</option>
+              <option value="Espèces">Espèces</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="editPlateforme">Plateforme *</label>
+            <select id="editPlateforme" required>
+              <option value="">-- Sélectionner --</option>
+              <option value="Netlify">Netlify</option>
+              <option value="Shopify">Shopify</option>
+              <option value="WooCommerce">WooCommerce</option>
+              <option value="Direct">Direct</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+            <button type="submit" class="primary-btn" style="flex: 1;">
+              ✓ Enregistrer
+            </button>
+            <button type="button" id="cancelEdit" class="reset-btn" style="flex: 1;">
+              ✕ Annuler
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="accounting.js"></script>
+  </body>
+</html>

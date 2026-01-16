@@ -6,6 +6,10 @@
 const OWNER_EMAIL = "maxime.frech.68@gmail.com";
 const SHOP_NAME = "MonThé";
 const LOGO_FILE_ID = "1YIzBCrbPzZs_ujW3sfKrz7nUnGu-2Ub9"; // ID du fichier logo dans Google Drive
+const INVOICE_FOLDER_ID = "1TwZkkYm0vdO8CQpIsNuS1qEr15As4aIT"; // Dossier Google Drive pour les factures
+const VAT_RATE = 0.20; // Taux TVA 20%
+const STRIPE_FEE_PERCENT = 0.014; // 1.4%
+const STRIPE_FEE_FIXED = 0.25; // 0.25€
 
 /**
  * Fonction GET - pour tester que le web app fonctionne et récupérer le hash
@@ -50,6 +54,10 @@ function doPost(e) {
       return changePasswordHash(data.oldPasswordHash, data.newPasswordHash);
     } else if (action === "getPasswordHash") {
       return getPasswordHash();
+    } else if (action === "updateVente") {
+      return updateVenteEntry(data.order_id, data.updates);
+    } else if (action === "deleteVente") {
+      return deleteVenteEntry(data.order_id);
     } else if (data.order_id || data.order_ref || data.email) {
       // Si pas d'action mais qu'on a des infos de commande, c'est une commande
       return handleOrder(data);
@@ -128,6 +136,38 @@ function handleOrder(data) {
   const row = buildRowFromHeaders(headers, rowObj);
   sh.appendRow(row);
 
+  // Générer et sauvegarder la facture dans Drive + Créer entrée VENTES
+  let invoiceUrl = "";
+  try {
+    const invoicePDF = generateInvoicePDF({
+      order_ref: orderId,
+      full_name: data.full_name || "",
+      email: data.email || "",
+      address: data.address || "",
+      city: data.city || "",
+      zip: data.zip || "",
+      items: data.items || [],
+      total_eur: Number(data.total_eur || 0),
+      created_at: new Date().toISOString(),
+      paid_at: new Date().toISOString()
+    }, LOGO_FILE_ID);
+
+    invoiceUrl = saveInvoiceToDrive(invoicePDF, orderId);
+    Logger.log("Facture sauvegardée: " + invoiceUrl);
+
+    createVentesEntry({
+      order_id: orderId,
+      full_name: data.full_name || "",
+      items: data.items || [],
+      total_eur: Number(data.total_eur || 0),
+      date: new Date()
+    }, invoiceUrl);
+
+  } catch (driveErr) {
+    Logger.log("Erreur Drive/VENTES: " + (driveErr.message || driveErr));
+    // Ne pas bloquer la commande si erreur comptable
+  }
+
   // Envoi emails
   sendOrderEmails({
     order_ref: orderId,
@@ -144,6 +184,206 @@ function handleOrder(data) {
   return ContentService.createTextOutput(
     JSON.stringify({ ok: true, order_id: orderId, created: true })
   ).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Crée une entrée dans la feuille VENTES pour une commande payée
+ * @param {Object} order - Données de la commande
+ * @param {string} invoiceUrl - URL de la facture dans Drive
+ * @returns {boolean} True si succès, false sinon
+ */
+function createVentesEntry(order, invoiceUrl) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName("VENTES") || ss.insertSheet("VENTES");
+
+    // Headers pour la feuille VENTES
+    const headersWanted = [
+      "date_paiement",
+      "order_id",
+      "client",
+      "produits",
+      "montant_ht",
+      "tva",
+      "montant_ttc",
+      "moyen_paiement",
+      "plateforme",
+      "frais_paiement",
+      "net_encaisse",
+      "url_facture"
+    ];
+
+    const headers = ensureHeaders(sh, headersWanted);
+
+    // Calculs
+    const vat = calculateVAT(order.total_eur, VAT_RATE);
+    const fees = calculateStripeFees(order.total_eur);
+    const net = order.total_eur - fees;
+
+    // Concaténer les noms de produits
+    const products = (order.items || []).map(item => item.name || item.id).join(", ");
+
+    // Construire la ligne
+    const rowObj = {
+      date_paiement: order.date || new Date(),
+      order_id: order.order_id,
+      client: order.full_name || "",
+      produits: products,
+      montant_ht: vat.ht,
+      tva: vat.tva,
+      montant_ttc: vat.ttc,
+      moyen_paiement: "Stripe",
+      plateforme: "Netlify",
+      frais_paiement: fees,
+      net_encaisse: net,
+      url_facture: invoiceUrl || ""
+    };
+
+    // Vérifier les doublons
+    const orderIdCol = headers.indexOf("order_id");
+    if (orderIdCol === -1) {
+      throw new Error("Colonne 'order_id' introuvable dans VENTES");
+    }
+
+    const existingRow = findRowByOrderRef(sh, order.order_id, orderIdCol);
+    if (existingRow !== -1) {
+      Logger.log("Entrée VENTES existe déjà: " + order.order_id);
+      return false;
+    }
+
+    // Ajouter la ligne
+    const row = buildRowFromHeaders(headers, rowObj);
+    sh.appendRow(row);
+
+    Logger.log("Entrée VENTES créée: " + order.order_id);
+    return true;
+
+  } catch (error) {
+    Logger.log("Erreur createVentesEntry: " + (error.message || error));
+    return false;
+  }
+}
+
+/**
+ * Met à jour une entrée dans la feuille VENTES
+ * @param {string} orderId - ID de la commande
+ * @param {Object} updates - Objet avec les champs à mettre à jour
+ * @returns {Object} Résultat de l'opération
+ */
+function updateVenteEntry(orderId, updates) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("VENTES");
+
+    if (!sheet) {
+      throw new Error("La feuille 'VENTES' n'existe pas");
+    }
+
+    // Récupérer les headers et data
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    // Trouver l'index de la colonne order_id
+    const orderIdColIndex = headers.indexOf("order_id");
+    if (orderIdColIndex === -1) {
+      throw new Error("Colonne 'order_id' non trouvée");
+    }
+
+    // Trouver la ligne
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][orderIdColIndex] === orderId) {
+        rowIndex = i + 1; // +1 car getRange est 1-indexed
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      throw new Error("Entrée VENTES non trouvée: " + orderId);
+    }
+
+    // Mettre à jour les champs fournis
+    Object.keys(updates).forEach(field => {
+      const colIndex = headers.indexOf(field);
+      if (colIndex !== -1) {
+        sheet.getRange(rowIndex, colIndex + 1).setValue(updates[field]);
+      }
+    });
+
+    // Si montant_ttc a été modifié, recalculer les champs dépendants
+    if (updates.montant_ttc !== undefined) {
+      const newTTC = Number(updates.montant_ttc);
+      const vat = calculateVAT(newTTC, VAT_RATE);
+      const fees = calculateStripeFees(newTTC);
+      const net = newTTC - fees;
+
+      const htColIndex = headers.indexOf("montant_ht");
+      const tvaColIndex = headers.indexOf("tva");
+      const feesColIndex = headers.indexOf("frais_paiement");
+      const netColIndex = headers.indexOf("net_encaisse");
+
+      if (htColIndex !== -1) sheet.getRange(rowIndex, htColIndex + 1).setValue(vat.ht);
+      if (tvaColIndex !== -1) sheet.getRange(rowIndex, tvaColIndex + 1).setValue(vat.tva);
+      if (feesColIndex !== -1) sheet.getRange(rowIndex, feesColIndex + 1).setValue(fees);
+      if (netColIndex !== -1) sheet.getRange(rowIndex, netColIndex + 1).setValue(net);
+    }
+
+    Logger.log("Entrée VENTES mise à jour: " + orderId);
+    return createResponse(true, "Entrée mise à jour avec succès", { orderId });
+
+  } catch (error) {
+    Logger.log("Erreur updateVenteEntry: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/**
+ * Supprime une entrée de la feuille VENTES
+ * @param {string} orderId - ID de la commande à supprimer
+ * @returns {Object} Résultat de l'opération
+ */
+function deleteVenteEntry(orderId) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("VENTES");
+
+    if (!sheet) {
+      throw new Error("La feuille 'VENTES' n'existe pas");
+    }
+
+    // Récupérer les données
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    // Trouver l'index de la colonne order_id
+    const orderIdColIndex = headers.indexOf("order_id");
+    if (orderIdColIndex === -1) {
+      throw new Error("Colonne 'order_id' non trouvée");
+    }
+
+    // Trouver la ligne
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][orderIdColIndex] === orderId) {
+        rowIndex = i + 1; // +1 car deleteRow est 1-indexed
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      throw new Error("Entrée VENTES non trouvée: " + orderId);
+    }
+
+    // Supprimer la ligne
+    sheet.deleteRow(rowIndex);
+
+    Logger.log("Entrée VENTES supprimée: " + orderId);
+    return createResponse(true, "Entrée supprimée avec succès", { orderId });
+
+  } catch (error) {
+    Logger.log("Erreur deleteVenteEntry: " + error);
+    return createResponse(false, error.toString());
+  }
 }
 
 function formatItemsText(items) {
@@ -185,6 +425,16 @@ function formatEuroFR(num) {
     .toFixed(2)
     .replace(".", ",")
     .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+/**
+ * Calcule les frais Stripe (1.4% + 0.25€)
+ * @param {number} amountTTC - Montant TTC
+ * @returns {number} Frais Stripe
+ */
+function calculateStripeFees(amountTTC) {
+  const ttc = Number(amountTTC || 0);
+  return (ttc * STRIPE_FEE_PERCENT) + STRIPE_FEE_FIXED;
 }
 
 /**
@@ -475,6 +725,47 @@ function generateInvoicePDF(order, logoFileId) {
   const html = generateInvoiceHTML(order, logoFileId);
   const filename = `Facture_${order.order_ref}.pdf`;
   return generatePDFFromHTML(html, filename);
+}
+
+/**
+ * Sauvegarde une facture PDF dans Google Drive et retourne l'URL publique
+ * @param {Blob} pdfBlob - Le blob PDF généré
+ * @param {string} orderId - L'ID de la commande pour nommer le fichier
+ * @returns {string} URL publique du fichier dans Drive
+ */
+function saveInvoiceToDrive(pdfBlob, orderId) {
+  try {
+    // Récupérer le dossier de destination
+    const folder = DriveApp.getFolderById(INVOICE_FOLDER_ID);
+
+    // Nom du fichier
+    const filename = `Facture_${orderId}.pdf`;
+
+    // Vérifier si un fichier avec ce nom existe déjà
+    const existingFiles = folder.getFilesByName(filename);
+    if (existingFiles.hasNext()) {
+      Logger.log("Facture existe déjà: " + filename);
+      const existingFile = existingFiles.next();
+      return existingFile.getUrl();
+    }
+
+    // Créer le fichier dans le dossier
+    const file = folder.createFile(pdfBlob);
+    file.setName(filename);
+
+    // Rendre le fichier accessible publiquement
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // Retourner l'URL publique
+    const fileUrl = file.getUrl();
+    Logger.log("Facture sauvegardée: " + fileUrl);
+
+    return fileUrl;
+
+  } catch (error) {
+    Logger.log("Erreur saveInvoiceToDrive: " + (error.message || error));
+    throw new Error("Impossible de sauvegarder la facture dans Drive: " + error.message);
+  }
 }
 
 function sendOrderEmails(order) {
