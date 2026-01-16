@@ -7,6 +7,7 @@ const OWNER_EMAIL = "maxime.frech.68@gmail.com";
 const SHOP_NAME = "MonThé";
 const LOGO_FILE_ID = "1YIzBCrbPzZs_ujW3sfKrz7nUnGu-2Ub9"; // ID du fichier logo dans Google Drive
 const INVOICE_FOLDER_ID = "1TwZkkYm0vdO8CQpIsNuS1qEr15As4aIT"; // Dossier Google Drive pour les factures
+const JUSTIFICATIF_FOLDER_ID = "1ozQC0gDq9upjZH7e24iqXf-Wyvo-gpMB"; // Dossier Google Drive pour les justificatifs de dépenses
 const VAT_RATE = 0.2; // Taux TVA 20%
 const STRIPE_FEE_PERCENT = 0.014; // 1.4%
 const STRIPE_FEE_FIXED = 0.25; // 0.25€
@@ -23,6 +24,18 @@ function doGet(e) {
   return ContentService.createTextOutput(
     "OK - Web App active ✅ (orders + emails + products)"
   ).setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
+ * Gère les requêtes OPTIONS (CORS preflight)
+ */
+function doOptions(e) {
+  return ContentService.createTextOutput("")
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader("Access-Control-Allow-Origin", "*")
+    .setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    .setHeader("Access-Control-Allow-Headers", "Content-Type")
+    .setHeader("Access-Control-Max-Age", "86400");
 }
 
 /**
@@ -44,6 +57,8 @@ function doPost(e) {
       return deleteProductFromSheet(data.id);
     } else if (action === "uploadImage") {
       return uploadImageToDrive(data.fileName, data.mimeType, data.base64Data);
+    } else if (action === "uploadJustificatif") {
+      return uploadJustificatifToDrive(data.fileName, data.mimeType, data.base64Data);
     } else if (action === "deleteOrder") {
       return deleteOrderFromSheet(data.order_id);
     } else if (action === "updateStock") {
@@ -1267,6 +1282,48 @@ function uploadImageToDrive(fileName, mimeType, base64Data) {
     });
   } catch (error) {
     Logger.log("Erreur uploadImageToDrive: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/**
+ * Upload un justificatif de dépense vers le dossier Google Drive spécifique
+ * @param {string} fileName - Nom du fichier
+ * @param {string} mimeType - Type MIME du fichier
+ * @param {string} base64Data - Données du fichier en base64
+ * @returns {Object} Résultat avec l'URL du fichier
+ */
+function uploadJustificatifToDrive(fileName, mimeType, base64Data) {
+  try {
+    // Récupérer le dossier de destination
+    const folder = DriveApp.getFolderById(JUSTIFICATIF_FOLDER_ID);
+
+    // Décoder le base64
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(base64Data),
+      mimeType,
+      fileName
+    );
+
+    // Créer le fichier dans le dossier
+    const file = folder.createFile(blob);
+
+    // Rendre le fichier accessible avec le lien
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // Obtenir l'URL publique
+    const fileId = file.getId();
+    const fileUrl = file.getUrl();
+
+    Logger.log("Justificatif uploadé: " + fileName + " -> " + fileUrl);
+
+    return createResponse(true, "Justificatif téléchargé avec succès", {
+      url: fileUrl,
+      fileId: fileId,
+      fileName: fileName,
+    });
+  } catch (error) {
+    Logger.log("Erreur uploadJustificatifToDrive: " + error);
     return createResponse(false, error.toString());
   }
 }

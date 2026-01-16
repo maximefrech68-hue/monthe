@@ -331,22 +331,25 @@ async function uploadFile(file) {
       reader.onload = async () => {
         const base64Data = reader.result.split(",")[1];
 
-        await fetch(APPS_SCRIPT_URL, {
+        const response = await fetch(APPS_SCRIPT_URL, {
           method: "POST",
-          mode: "no-cors",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            action: "uploadImage",
+            action: "uploadJustificatif",
             fileName: file.name,
             mimeType: file.type,
             base64Data: base64Data,
           }),
         });
 
-        // Avec no-cors on ne peut pas lire la réponse
-        // On retourne une URL temporaire qui sera remplacée par le backend
-        // Le backend stocke l'URL dans la feuille directement
-        resolve("UPLOAD_EN_COURS");
+        // Lire la réponse JSON
+        const result = await response.json();
+
+        if (result.success && result.url) {
+          resolve(result.url);
+        } else {
+          throw new Error(result.message || "Erreur lors de l'upload");
+        }
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
@@ -396,9 +399,8 @@ depenseForm.addEventListener("submit", async (e) => {
   };
 
   try {
-    await fetch(APPS_SCRIPT_URL, {
+    const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "addDepense",
@@ -406,9 +408,15 @@ depenseForm.addEventListener("submit", async (e) => {
       }),
     });
 
-    alert("Dépense ajoutée avec succès !");
-    depenseModal.classList.add("hidden");
-    setTimeout(() => location.reload(), 500);
+    const result = await response.json();
+
+    if (result.success) {
+      alert("Dépense ajoutée avec succès !");
+      depenseModal.classList.add("hidden");
+      setTimeout(() => location.reload(), 500);
+    } else {
+      throw new Error(result.message || "Erreur lors de l'ajout");
+    }
   } catch (error) {
     console.error("Erreur:", error);
     alert("Erreur lors de l'ajout de la dépense: " + error.message);
@@ -464,7 +472,6 @@ window.deleteDepense = async function(date, fournisseur) {
 
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).catch(err => {
@@ -472,16 +479,19 @@ window.deleteDepense = async function(date, fournisseur) {
       throw err;
     });
 
-    console.log("6. Requête envoyée (response:", response, ")");
+    console.log("6. Requête envoyée, lecture de la réponse...");
 
-    // Avec no-cors, on ne peut pas lire la réponse, donc on suppose que ça a marché
-    console.log("7. Rechargement de la page dans 1 seconde...");
+    const result = await response.json();
+    console.log("7. Résultat:", result);
 
-    // Attendre un peu avant de recharger pour laisser le temps au serveur
-    setTimeout(() => {
-      console.log("8. Rechargement...");
-      location.reload();
-    }, 1000);
+    if (result.success) {
+      console.log("8. Suppression réussie, rechargement dans 500ms...");
+      setTimeout(() => {
+        location.reload();
+      }, 500);
+    } else {
+      throw new Error(result.message || "Erreur lors de la suppression");
+    }
   } catch (error) {
     console.error("9. Erreur complète:", error);
     alert("Erreur lors de la suppression: " + error.message);
