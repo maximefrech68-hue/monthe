@@ -225,7 +225,7 @@ function createVentesEntry(order, invoiceUrl) {
     // Calculs
     const vat = calculateVAT(order.total_eur, VAT_RATE);
     const fees = calculateStripeFees(order.total_eur);
-    const net = order.total_eur - fees;
+    const net = vat.ht - fees;
 
     // Concaténer les noms de produits
     const products = (order.items || [])
