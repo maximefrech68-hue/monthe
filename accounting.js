@@ -622,6 +622,23 @@ accountingBody.addEventListener("click", async (e) => {
   }
 });
 
+// Calculer les montants automatiquement
+function calculateAmounts() {
+  const ttc = parseFloat(document.getElementById("editMontantTTC").value) || 0;
+  const tauxTVA = parseFloat(document.getElementById("editTauxTVA").value) || 0;
+  const frais = parseFloat(document.getElementById("editFraisPaiement").value) || 0;
+
+  // Calculs
+  const ht = ttc / (1 + tauxTVA / 100);
+  const tva = ttc - ht;
+  const net = ht - frais;
+
+  // Afficher les valeurs calculées
+  document.getElementById("calculatedHT").textContent = ht.toFixed(2) + " €";
+  document.getElementById("calculatedTVA").textContent = tva.toFixed(2) + " €";
+  document.getElementById("calculatedNet").textContent = net.toFixed(2) + " €";
+}
+
 // Afficher modal d'édition
 function showEditModal(orderId) {
   const vente = allVentes.find((v) => v.order_id === orderId);
@@ -629,10 +646,21 @@ function showEditModal(orderId) {
 
   // Remplir le formulaire
   document.getElementById("editOrderId").value = vente.order_id;
-  document.getElementById("editClient").value = vente.client;
   document.getElementById("editMontantTTC").value = vente.montant_ttc.toFixed(2);
-  document.getElementById("editMoyenPaiement").value = vente.moyen_paiement;
-  document.getElementById("editPlateforme").value = vente.plateforme;
+
+  // Calculer le taux TVA depuis les données existantes
+  const tauxTVA = vente.montant_ttc > 0 ? ((vente.tva / (vente.montant_ttc - vente.tva)) * 100) : 20;
+  document.getElementById("editTauxTVA").value = tauxTVA.toFixed(2);
+
+  document.getElementById("editFraisPaiement").value = vente.frais_paiement.toFixed(2);
+
+  // Calculer et afficher les montants
+  calculateAmounts();
+
+  // Ajouter les listeners pour recalcul automatique
+  document.getElementById("editMontantTTC").addEventListener("input", calculateAmounts);
+  document.getElementById("editTauxTVA").addEventListener("input", calculateAmounts);
+  document.getElementById("editFraisPaiement").addEventListener("input", calculateAmounts);
 
   // Afficher le modal
   editModal.classList.remove("hidden");
@@ -658,12 +686,11 @@ editForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const orderId = document.getElementById("editOrderId").value;
-  const client = document.getElementById("editClient").value;
   const montantTTC = parseFloat(document.getElementById("editMontantTTC").value);
-  const moyenPaiement = document.getElementById("editMoyenPaiement").value;
-  const plateforme = document.getElementById("editPlateforme").value;
+  const tauxTVA = parseFloat(document.getElementById("editTauxTVA").value);
+  const fraisPaiement = parseFloat(document.getElementById("editFraisPaiement").value);
 
-  if (!orderId || !client || isNaN(montantTTC) || !moyenPaiement || !plateforme) {
+  if (!orderId || isNaN(montantTTC) || isNaN(tauxTVA) || isNaN(fraisPaiement)) {
     alert("Veuillez remplir tous les champs obligatoires.");
     return;
   }
@@ -677,10 +704,9 @@ editForm.addEventListener("submit", async (e) => {
         action: "updateVente",
         order_id: orderId,
         updates: {
-          client: client,
-          montant_ttc: montantTTC,
-          moyen_paiement: moyenPaiement,
-          plateforme: plateforme
+          "Montant TTC": montantTTC,
+          "taux_tva": tauxTVA,
+          "Frais paiement": fraisPaiement
         }
       }),
     });

@@ -238,16 +238,16 @@ function createVentesEntry(order, invoiceUrl) {
     const rowObj = {
       "Date paiement": order.date || new Date(),
       "N° commande": order.order_id,
-      "Client": order.full_name || "",
-      "Produit": products,
+      Client: order.full_name || "",
+      Produit: products,
       "Montant HT": vat.ht,
-      "TVA": vat.tva,
+      TVA: vat.tva,
       "Montant TTC": vat.ttc,
       "Moyen paiement": "Stripe",
-      "Plateforme": "Netlify",
+      Plateforme: "Netlify",
       "Frais paiement": fees,
       "Net encaissé": net,
-      "url_facture": invoiceUrl || "",
+      url_facture: invoiceUrl || "",
     };
 
     // Vérifier les doublons
@@ -312,35 +312,40 @@ function updateVenteEntry(orderId, updates) {
       throw new Error("Entrée VENTES non trouvée: " + orderId);
     }
 
-    // Mettre à jour les champs fournis
-    Object.keys(updates).forEach((field) => {
-      const colIndex = headers.indexOf(field);
-      if (colIndex !== -1) {
-        sheet.getRange(rowIndex, colIndex + 1).setValue(updates[field]);
-      }
-    });
+    // Récupérer les valeurs actuelles ou mises à jour
+    const newTTC = updates["Montant TTC"] !== undefined
+      ? Number(updates["Montant TTC"])
+      : Number(data[rowIndex - 1][headers.indexOf("Montant TTC")] || 0);
 
-    // Si Montant TTC a été modifié, recalculer les champs dépendants
-    if (updates["Montant TTC"] !== undefined) {
-      const newTTC = Number(updates["Montant TTC"]);
-      const vat = calculateVAT(newTTC, VAT_RATE);
-      const fees = calculateStripeFees(newTTC);
-      const net = vat.ht - fees;
+    const tauxTVA = updates["taux_tva"] !== undefined
+      ? Number(updates["taux_tva"]) / 100 // Convertir % en décimal
+      : VAT_RATE; // Par défaut 20%
 
-      const htColIndex = headers.indexOf("Montant HT");
-      const tvaColIndex = headers.indexOf("TVA");
-      const feesColIndex = headers.indexOf("Frais paiement");
-      const netColIndex = headers.indexOf("Net encaissé");
+    const frais = updates["Frais paiement"] !== undefined
+      ? Number(updates["Frais paiement"])
+      : Number(data[rowIndex - 1][headers.indexOf("Frais paiement")] || 0);
 
-      if (htColIndex !== -1)
-        sheet.getRange(rowIndex, htColIndex + 1).setValue(vat.ht);
-      if (tvaColIndex !== -1)
-        sheet.getRange(rowIndex, tvaColIndex + 1).setValue(vat.tva);
-      if (feesColIndex !== -1)
-        sheet.getRange(rowIndex, feesColIndex + 1).setValue(fees);
-      if (netColIndex !== -1)
-        sheet.getRange(rowIndex, netColIndex + 1).setValue(net);
-    }
+    // Recalculer tous les champs dérivés
+    const vat = calculateVAT(newTTC, tauxTVA);
+    const net = vat.ht - frais;
+
+    // Mettre à jour tous les champs
+    const htColIndex = headers.indexOf("Montant HT");
+    const tvaColIndex = headers.indexOf("TVA");
+    const ttcColIndex = headers.indexOf("Montant TTC");
+    const feesColIndex = headers.indexOf("Frais paiement");
+    const netColIndex = headers.indexOf("Net encaissé");
+
+    if (ttcColIndex !== -1)
+      sheet.getRange(rowIndex, ttcColIndex + 1).setValue(newTTC);
+    if (htColIndex !== -1)
+      sheet.getRange(rowIndex, htColIndex + 1).setValue(vat.ht);
+    if (tvaColIndex !== -1)
+      sheet.getRange(rowIndex, tvaColIndex + 1).setValue(vat.tva);
+    if (feesColIndex !== -1)
+      sheet.getRange(rowIndex, feesColIndex + 1).setValue(frais);
+    if (netColIndex !== -1)
+      sheet.getRange(rowIndex, netColIndex + 1).setValue(net);
 
     Logger.log("Entrée VENTES mise à jour: " + orderId);
     return createResponse(true, "Entrée mise à jour avec succès", { orderId });
@@ -1494,7 +1499,9 @@ function syncVentesFromOrders() {
       const orderId = row[orderIdIdx];
       const fullName = row[fullNameIdx] || "";
       const itemsJsonStr = row[itemsJsonIdx] || "[]";
-      const totalEur = Number(String(row[totalEurIdx] || "0").replace(",", "."));
+      const totalEur = Number(
+        String(row[totalEurIdx] || "0").replace(",", ".")
+      );
       const date = row[dateIdx];
 
       // Ignorer les commandes vides ou invalides
@@ -1539,7 +1546,9 @@ function syncVentesFromOrders() {
           errorCount++;
         }
       } catch (err) {
-        Logger.log("Erreur création VENTES pour " + orderId + ": " + err.message);
+        Logger.log(
+          "Erreur création VENTES pour " + orderId + ": " + err.message
+        );
         errorCount++;
       }
     }
@@ -1550,7 +1559,7 @@ function syncVentesFromOrders() {
     return createResponse(true, message, {
       created: createdCount,
       skipped: skippedCount,
-      errors: errorCount
+      errors: errorCount,
     });
   } catch (error) {
     Logger.log("Erreur syncVentesFromOrders: " + error);
