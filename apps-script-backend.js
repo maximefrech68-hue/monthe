@@ -7,7 +7,7 @@ const OWNER_EMAIL = "maxime.frech.68@gmail.com";
 const SHOP_NAME = "MonThé";
 const LOGO_FILE_ID = "1YIzBCrbPzZs_ujW3sfKrz7nUnGu-2Ub9"; // ID du fichier logo dans Google Drive
 const INVOICE_FOLDER_ID = "1TwZkkYm0vdO8CQpIsNuS1qEr15As4aIT"; // Dossier Google Drive pour les factures
-const VAT_RATE = 0.20; // Taux TVA 20%
+const VAT_RATE = 0.2; // Taux TVA 20%
 const STRIPE_FEE_PERCENT = 0.014; // 1.4%
 const STRIPE_FEE_FIXED = 0.25; // 0.25€
 
@@ -139,30 +139,35 @@ function handleOrder(data) {
   // Générer et sauvegarder la facture dans Drive + Créer entrée VENTES
   let invoiceUrl = "";
   try {
-    const invoicePDF = generateInvoicePDF({
-      order_ref: orderId,
-      full_name: data.full_name || "",
-      email: data.email || "",
-      address: data.address || "",
-      city: data.city || "",
-      zip: data.zip || "",
-      items: data.items || [],
-      total_eur: Number(data.total_eur || 0),
-      created_at: new Date().toISOString(),
-      paid_at: new Date().toISOString()
-    }, LOGO_FILE_ID);
+    const invoicePDF = generateInvoicePDF(
+      {
+        order_ref: orderId,
+        full_name: data.full_name || "",
+        email: data.email || "",
+        address: data.address || "",
+        city: data.city || "",
+        zip: data.zip || "",
+        items: data.items || [],
+        total_eur: Number(data.total_eur || 0),
+        created_at: new Date().toISOString(),
+        paid_at: new Date().toISOString(),
+      },
+      LOGO_FILE_ID
+    );
 
     invoiceUrl = saveInvoiceToDrive(invoicePDF, orderId);
     Logger.log("Facture sauvegardée: " + invoiceUrl);
 
-    createVentesEntry({
-      order_id: orderId,
-      full_name: data.full_name || "",
-      items: data.items || [],
-      total_eur: Number(data.total_eur || 0),
-      date: new Date()
-    }, invoiceUrl);
-
+    createVentesEntry(
+      {
+        order_id: orderId,
+        full_name: data.full_name || "",
+        items: data.items || [],
+        total_eur: Number(data.total_eur || 0),
+        date: new Date(),
+      },
+      invoiceUrl
+    );
   } catch (driveErr) {
     Logger.log("Erreur Drive/VENTES: " + (driveErr.message || driveErr));
     // Ne pas bloquer la commande si erreur comptable
@@ -210,7 +215,7 @@ function createVentesEntry(order, invoiceUrl) {
       "plateforme",
       "frais_paiement",
       "net_encaisse",
-      "url_facture"
+      "url_facture",
     ];
 
     const headers = ensureHeaders(sh, headersWanted);
@@ -221,7 +226,9 @@ function createVentesEntry(order, invoiceUrl) {
     const net = order.total_eur - fees;
 
     // Concaténer les noms de produits
-    const products = (order.items || []).map(item => item.name || item.id).join(", ");
+    const products = (order.items || [])
+      .map((item) => item.name || item.id)
+      .join(", ");
 
     // Construire la ligne
     const rowObj = {
@@ -236,7 +243,7 @@ function createVentesEntry(order, invoiceUrl) {
       plateforme: "Netlify",
       frais_paiement: fees,
       net_encaisse: net,
-      url_facture: invoiceUrl || ""
+      url_facture: invoiceUrl || "",
     };
 
     // Vérifier les doublons
@@ -257,7 +264,6 @@ function createVentesEntry(order, invoiceUrl) {
 
     Logger.log("Entrée VENTES créée: " + order.order_id);
     return true;
-
   } catch (error) {
     Logger.log("Erreur createVentesEntry: " + (error.message || error));
     return false;
@@ -303,7 +309,7 @@ function updateVenteEntry(orderId, updates) {
     }
 
     // Mettre à jour les champs fournis
-    Object.keys(updates).forEach(field => {
+    Object.keys(updates).forEach((field) => {
       const colIndex = headers.indexOf(field);
       if (colIndex !== -1) {
         sheet.getRange(rowIndex, colIndex + 1).setValue(updates[field]);
@@ -322,15 +328,18 @@ function updateVenteEntry(orderId, updates) {
       const feesColIndex = headers.indexOf("frais_paiement");
       const netColIndex = headers.indexOf("net_encaisse");
 
-      if (htColIndex !== -1) sheet.getRange(rowIndex, htColIndex + 1).setValue(vat.ht);
-      if (tvaColIndex !== -1) sheet.getRange(rowIndex, tvaColIndex + 1).setValue(vat.tva);
-      if (feesColIndex !== -1) sheet.getRange(rowIndex, feesColIndex + 1).setValue(fees);
-      if (netColIndex !== -1) sheet.getRange(rowIndex, netColIndex + 1).setValue(net);
+      if (htColIndex !== -1)
+        sheet.getRange(rowIndex, htColIndex + 1).setValue(vat.ht);
+      if (tvaColIndex !== -1)
+        sheet.getRange(rowIndex, tvaColIndex + 1).setValue(vat.tva);
+      if (feesColIndex !== -1)
+        sheet.getRange(rowIndex, feesColIndex + 1).setValue(fees);
+      if (netColIndex !== -1)
+        sheet.getRange(rowIndex, netColIndex + 1).setValue(net);
     }
 
     Logger.log("Entrée VENTES mise à jour: " + orderId);
     return createResponse(true, "Entrée mise à jour avec succès", { orderId });
-
   } catch (error) {
     Logger.log("Erreur updateVenteEntry: " + error);
     return createResponse(false, error.toString());
@@ -379,7 +388,6 @@ function deleteVenteEntry(orderId) {
 
     Logger.log("Entrée VENTES supprimée: " + orderId);
     return createResponse(true, "Entrée supprimée avec succès", { orderId });
-
   } catch (error) {
     Logger.log("Erreur deleteVenteEntry: " + error);
     return createResponse(false, error.toString());
@@ -434,7 +442,7 @@ function formatEuroFR(num) {
  */
 function calculateStripeFees(amountTTC) {
   const ttc = Number(amountTTC || 0);
-  return (ttc * STRIPE_FEE_PERCENT) + STRIPE_FEE_FIXED;
+  return ttc * STRIPE_FEE_PERCENT + STRIPE_FEE_FIXED;
 }
 
 /**
@@ -630,7 +638,11 @@ function generateInvoiceHTML(order, logoFileId) {
       <div class="invoice-container">
         <div class="header">
           <div class="header-left">
-            ${logoBase64 ? `<img src="${logoBase64}" alt="MonThé" class="logo">` : ""}
+            ${
+              logoBase64
+                ? `<img src="${logoBase64}" alt="MonThé" class="logo">`
+                : ""
+            }
             <div style="font-size: 18pt; font-weight: bold; margin-bottom: 5px;">${SHOP_NAME}</div>
             <div class="company-info">
               ${OWNER_EMAIL}
@@ -761,10 +773,11 @@ function saveInvoiceToDrive(pdfBlob, orderId) {
     Logger.log("Facture sauvegardée: " + fileUrl);
 
     return fileUrl;
-
   } catch (error) {
     Logger.log("Erreur saveInvoiceToDrive: " + (error.message || error));
-    throw new Error("Impossible de sauvegarder la facture dans Drive: " + error.message);
+    throw new Error(
+      "Impossible de sauvegarder la facture dans Drive: " + error.message
+    );
   }
 }
 
