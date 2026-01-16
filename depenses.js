@@ -449,30 +449,41 @@ window.deleteDepense = async function(date, fournisseur) {
     return;
   }
 
-  console.log("Tentative de suppression:", { date, fournisseur });
+  console.log("1. Tentative de suppression:", { date, fournisseur });
+  console.log("2. URL:", APPS_SCRIPT_URL);
+
+  const payload = {
+    action: "deleteDepense",
+    date: date,
+    fournisseur: fournisseur,
+  };
+  console.log("3. Payload:", JSON.stringify(payload));
 
   try {
-    // Utiliser no-cors car Google Apps Script ne gère pas bien CORS
-    await fetch(APPS_SCRIPT_URL, {
+    console.log("4. Envoi de la requête...");
+
+    const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "deleteDepense",
-        date: date,
-        fournisseur: fournisseur,
-      }),
+      body: JSON.stringify(payload),
+    }).catch(err => {
+      console.error("5. Erreur fetch:", err);
+      throw err;
     });
 
+    console.log("6. Requête envoyée (response:", response, ")");
+
     // Avec no-cors, on ne peut pas lire la réponse, donc on suppose que ça a marché
-    console.log("Requête envoyée, rechargement de la page...");
+    console.log("7. Rechargement de la page dans 1 seconde...");
 
     // Attendre un peu avant de recharger pour laisser le temps au serveur
     setTimeout(() => {
+      console.log("8. Rechargement...");
       location.reload();
-    }, 500);
+    }, 1000);
   } catch (error) {
-    console.error("Erreur complète:", error);
+    console.error("9. Erreur complète:", error);
     alert("Erreur lors de la suppression: " + error.message);
   }
 };
