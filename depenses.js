@@ -403,12 +403,18 @@ depenseForm.addEventListener("submit", async (e) => {
   }
 
   try {
+    console.log("===== DÉBUT SOUMISSION FORMULAIRE =====");
+    console.log("Mode édition:", isEditMode);
+    console.log("depenseId:", depenseId);
+
     let payload;
     let successMessage;
 
     if (isEditMode) {
       // Mode modification
       const [originalDate, originalFournisseur] = depenseId.split("|");
+      console.log("Date originale:", originalDate);
+      console.log("Fournisseur original:", originalFournisseur);
 
       const updates = {
         Date: date,
@@ -433,6 +439,7 @@ depenseForm.addEventListener("submit", async (e) => {
         updates: updates
       };
 
+      console.log("Payload MODIFICATION:", JSON.stringify(payload, null, 2));
       successMessage = "Dépense modifiée avec succès !";
     } else {
       // Mode ajout
@@ -453,8 +460,13 @@ depenseForm.addEventListener("submit", async (e) => {
         data: depenseData
       };
 
+      console.log("Payload AJOUT:", JSON.stringify(payload, null, 2));
       successMessage = "Dépense ajoutée avec succès !";
     }
+
+    console.log("===== ENVOI REQUÊTE FETCH =====");
+    console.log("URL:", APPS_SCRIPT_URL);
+    console.log("Payload final:", JSON.stringify(payload, null, 2));
 
     await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -462,6 +474,9 @@ depenseForm.addEventListener("submit", async (e) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+
+    console.log("✓ Fetch terminé sans erreur");
+    console.log("===== FIN SOUMISSION =====");
 
     // Avec mode no-cors, on ne peut pas lire la réponse
     // On considère que ça a fonctionné si pas d'erreur fetch
@@ -476,11 +491,23 @@ depenseForm.addEventListener("submit", async (e) => {
 
 // Modifier une dépense
 window.editDepense = function(date, fournisseur) {
+  console.log("===== editDepense appelée =====");
+  console.log("Date:", date);
+  console.log("Fournisseur:", fournisseur);
+
   const depense = allDepenses.find((d) => d.date === date && d.fournisseur === fournisseur);
-  if (!depense) return;
+
+  if (!depense) {
+    console.error("Dépense non trouvée dans allDepenses!");
+    return;
+  }
+
+  console.log("Dépense trouvée:", depense);
 
   document.getElementById("modalTitle").textContent = "Modifier la dépense";
-  document.getElementById("depenseId").value = `${date}|${fournisseur}`;
+  const depenseIdValue = `${date}|${fournisseur}`;
+  document.getElementById("depenseId").value = depenseIdValue;
+  console.log("depenseId défini à:", depenseIdValue);
   document.getElementById("depenseDate").value = depense.date;
   document.getElementById("depenseFournisseur").value = depense.fournisseur;
   document.getElementById("depenseCategorie").value = depense.categorie;
