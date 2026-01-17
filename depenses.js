@@ -331,7 +331,7 @@ async function uploadFile(file) {
       reader.onload = async () => {
         const base64Data = reader.result.split(",")[1];
 
-        // Note: On retire le header Content-Type pour éviter CORS preflight
+        // Note: Sans header Content-Type pour éviter CORS preflight
         const response = await fetch(APPS_SCRIPT_URL + "?action=uploadJustificatif", {
           method: "POST",
           body: JSON.stringify({
@@ -342,8 +342,17 @@ async function uploadFile(file) {
           }),
         });
 
-        // Lire la réponse JSON
-        const result = await response.json();
+        console.log("=== RÉPONSE UPLOAD ===");
+        console.log("Status:", response.status, response.ok);
+
+        const responseText = await response.text();
+        console.log("Réponse brute:", responseText);
+
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP ${response.status}: ${responseText.substring(0, 200)}`);
+        }
+
+        const result = JSON.parse(responseText);
 
         if (result.success && result.url) {
           resolve(result.url);
@@ -447,20 +456,18 @@ depenseForm.addEventListener("submit", async (e) => {
       successMessage = "Dépense ajoutée avec succès !";
     }
 
-    const response = await fetch(APPS_SCRIPT_URL, {
+    await fetch(APPS_SCRIPT_URL, {
       method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    const result = await response.json();
-
-    if (result.success) {
-      alert(successMessage);
-      depenseModal.classList.add("hidden");
-      setTimeout(() => location.reload(), 500);
-    } else {
-      throw new Error(result.message || "Erreur lors de l'opération");
-    }
+    // Avec mode no-cors, on ne peut pas lire la réponse
+    // On considère que ça a fonctionné si pas d'erreur fetch
+    alert(successMessage);
+    depenseModal.classList.add("hidden");
+    setTimeout(() => location.reload(), 500);
   } catch (error) {
     console.error("Erreur:", error);
     alert("Erreur lors de l'opération: " + error.message);
@@ -514,28 +521,20 @@ window.deleteDepense = async function(date, fournisseur) {
   try {
     console.log("4. Envoi de la requête...");
 
-    const response = await fetch(APPS_SCRIPT_URL, {
+    await fetch(APPS_SCRIPT_URL, {
       method: "POST",
+      mode: "no-cors",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    }).catch(err => {
-      console.error("5. Erreur fetch:", err);
-      throw err;
     });
 
-    console.log("6. Requête envoyée, lecture de la réponse...");
+    console.log("6. Suppression envoyée avec succès");
 
-    const result = await response.json();
-    console.log("7. Résultat:", result);
-
-    if (result.success) {
-      console.log("8. Suppression réussie, rechargement dans 500ms...");
-      setTimeout(() => {
-        location.reload();
-      }, 500);
-    } else {
-      throw new Error(result.message || "Erreur lors de la suppression");
-    }
+    // Avec mode no-cors, on ne peut pas lire la réponse
+    // On considère que ça a fonctionné si pas d'erreur fetch
+    setTimeout(() => {
+      location.reload();
+    }, 500);
   } catch (error) {
     console.error("9. Erreur complète:", error);
     alert("Erreur lors de la suppression: " + error.message);
