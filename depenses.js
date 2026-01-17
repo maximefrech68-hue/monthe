@@ -36,6 +36,25 @@ document.addEventListener("DOMContentLoaded", () => {
   loadDepenses();
 });
 
+// Event delegation pour les boutons d'action (sécurisé contre XSS)
+depensesTableBody.addEventListener("click", (e) => {
+  // Bouton Modifier
+  if (e.target.closest(".btn-edit")) {
+    const btn = e.target.closest(".btn-edit");
+    const date = btn.getAttribute("data-date");
+    const fournisseur = btn.getAttribute("data-fournisseur");
+    editDepense(date, fournisseur);
+  }
+
+  // Bouton Supprimer
+  if (e.target.closest(".btn-delete")) {
+    const btn = e.target.closest(".btn-delete");
+    const date = btn.getAttribute("data-date");
+    const fournisseur = btn.getAttribute("data-fournisseur");
+    deleteDepense(date, fournisseur);
+  }
+});
+
 // Parser une ligne CSV
 function parseCSVLine(line, delimiter = ",") {
   const result = [];
@@ -173,16 +192,19 @@ function renderTable() {
 
   depensesTableBody.innerHTML = filtered
     .map((d, idx) => {
-      const safeDate = (d.date || "").replace(/'/g, "\\'");
-      const safeFournisseur = (d.fournisseur || "").replace(/'/g, "\\'");
+      // Échapper les données pour les attributs HTML
+      const escapedDate = escapeHtml(d.date || "");
+      const escapedFournisseur = escapeHtml(d.fournisseur || "");
+      const escapedCategorie = escapeHtml(d.categorie || "");
+      const escapedDescription = escapeHtml(d.description || "");
 
       return `
       <tr>
         <td><input type="checkbox" data-index="${idx}" /></td>
-        <td>${d.date || "-"}</td>
-        <td>${d.fournisseur || "-"}</td>
-        <td>${d.categorie || "-"}</td>
-        <td>${d.description || "-"}</td>
+        <td>${escapedDate || "-"}</td>
+        <td>${escapedFournisseur || "-"}</td>
+        <td>${escapedCategorie || "-"}</td>
+        <td>${escapedDescription || "-"}</td>
         <td style="text-align: right;">${d.montant_ht.toFixed(2)} €</td>
         <td style="text-align: right;">${d.tva.toFixed(2)} €</td>
         <td style="text-align: right; font-weight: bold;">${d.montant_ttc.toFixed(2)} €</td>
@@ -191,13 +213,20 @@ function renderTable() {
           ${d.justificatif ? `<a href="${d.justificatif}" target="_blank" class="justificatif-link">📄 Voir</a>` : "-"}
         </td>
         <td>
-          <button class="action-btn" onclick="editDepense('${safeDate}', '${safeFournisseur}')">✏️ Modifier</button>
-          <button class="danger-btn" onclick="deleteDepense('${safeDate}', '${safeFournisseur}')">🗑️</button>
+          <button class="action-btn btn-edit" data-date="${escapedDate}" data-fournisseur="${escapedFournisseur}">✏️ Modifier</button>
+          <button class="danger-btn btn-delete" data-date="${escapedDate}" data-fournisseur="${escapedFournisseur}">🗑️</button>
         </td>
       </tr>
     `;
     })
     .join("");
+}
+
+// Fonction d'échappement HTML pour prévenir les injections XSS
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // Event listeners filtres
@@ -533,7 +562,7 @@ function convertDateToInputFormat(dateStr) {
 }
 
 // Modifier une dépense
-window.editDepense = function (date, fournisseur) {
+function editDepense(date, fournisseur) {
   console.log("===== editDepense appelée =====");
   console.log("Date:", date);
   console.log("Fournisseur:", fournisseur);
@@ -581,10 +610,10 @@ window.editDepense = function (date, fournisseur) {
   calculateAmountsDepense();
 
   depenseModal.classList.remove("hidden");
-};
+}
 
 // Supprimer une dépense
-window.deleteDepense = async function (date, fournisseur) {
+async function deleteDepense(date, fournisseur) {
   if (!confirm(`Supprimer la dépense du ${date} (${fournisseur}) ?`)) {
     return;
   }
@@ -618,4 +647,4 @@ window.deleteDepense = async function (date, fournisseur) {
     console.error("9. Erreur complète:", error);
     alert("Erreur lors de la suppression: " + error.message);
   }
-};
+}
