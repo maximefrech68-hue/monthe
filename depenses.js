@@ -489,7 +489,8 @@ window.editDepense = function(date, fournisseur) {
 
   // Calculer le taux de TVA à partir du montant TVA et HT
   const tauxTVA = depense.montant_ht > 0 ? (depense.tva / depense.montant_ht) * 100 : 20;
-  document.getElementById("depenseTauxTVA").value = tauxTVA.toFixed(2);
+  // Arrondir à 2 décimales SANS toFixed pour éviter problèmes de saisie
+  document.getElementById("depenseTauxTVA").value = Math.round(tauxTVA * 100) / 100;
 
   document.getElementById("depensePaiement").value = depense.paiement;
 
