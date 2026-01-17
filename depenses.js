@@ -321,53 +321,21 @@ function handleFileSelect(file) {
   filePreview.innerHTML = `<strong>Fichier sélectionné :</strong> ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
 }
 
-// Upload vers Google Drive
-async function uploadFile(file) {
-  if (!file) return "";
-
-  try {
+/**
+ * Convertit un fichier en base64
+ * @param {File} file - Le fichier à convertir
+ * @returns {Promise<string>} La chaîne base64 (sans le préfixe data:...)
+ */
+function getFileBase64(file) {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    return new Promise((resolve, reject) => {
-      reader.onload = async () => {
-        const base64Data = reader.result.split(",")[1];
-
-        // Note: Sans header Content-Type pour éviter CORS preflight
-        const response = await fetch(APPS_SCRIPT_URL + "?action=uploadJustificatif", {
-          method: "POST",
-          body: JSON.stringify({
-            action: "uploadJustificatif",
-            fileName: file.name,
-            mimeType: file.type,
-            base64Data: base64Data,
-          }),
-        });
-
-        console.log("=== RÉPONSE UPLOAD ===");
-        console.log("Status:", response.status, response.ok);
-
-        const responseText = await response.text();
-        console.log("Réponse brute:", responseText);
-
-        if (!response.ok) {
-          throw new Error(`Erreur HTTP ${response.status}: ${responseText.substring(0, 200)}`);
-        }
-
-        const result = JSON.parse(responseText);
-
-        if (result.success && result.url) {
-          resolve(result.url);
-        } else {
-          throw new Error(result.message || "Erreur lors de l'upload");
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  } catch (error) {
-    console.error("Erreur upload:", error);
-    alert("Erreur lors de l'upload du fichier: " + error.message);
-    return "";
-  }
+    reader.onload = () => {
+      const base64 = reader.result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 // Soumettre le formulaire
@@ -392,12 +360,20 @@ depenseForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  // Upload du fichier si présent
-  let justificatif = "";
+  // Préparer les données du fichier si présent
+  let fileData = null;
   if (currentFile) {
-    justificatif = await uploadFile(currentFile);
-    if (!justificatif) {
-      alert("Erreur lors de l'upload du fichier. Veuillez réessayer.");
+    try {
+      const base64Data = await getFileBase64(currentFile);
+      fileData = {
+        fileName: currentFile.name,
+        mimeType: currentFile.type,
+        base64Data: base64Data
+      };
+      console.log("Fichier préparé:", fileData.fileName, "Taille base64:", base64Data.length);
+    } catch (error) {
+      console.error("Erreur préparation fichier:", error);
+      alert("Erreur lors de la préparation du fichier. Veuillez réessayer.");
       return;
     }
   }
@@ -427,17 +403,16 @@ depenseForm.addEventListener("submit", async (e) => {
         Paiement: paiement
       };
 
-      // Ajouter le justificatif seulement si un nouveau fichier a été uploadé
-      if (justificatif) {
-        updates.Justificatif = justificatif;
-      }
-
       payload = {
-        action: "updateDepense",
+        action: fileData ? "updateDepenseWithFile" : "updateDepense",
         date: originalDate,
         fournisseur: originalFournisseur,
         updates: updates
       };
+
+      if (fileData) {
+        payload.fileData = fileData;
+      }
 
       console.log("Payload MODIFICATION:", JSON.stringify(payload, null, 2));
       successMessage = "Dépense modifiée avec succès !";
@@ -452,13 +427,17 @@ depenseForm.addEventListener("submit", async (e) => {
         TVA: montantTVA,
         TTC: ttc,
         Paiement: paiement,
-        Justificatif: justificatif
+        Justificatif: ""
       };
 
       payload = {
-        action: "addDepense",
+        action: fileData ? "addDepenseWithFile" : "addDepense",
         data: depenseData
       };
+
+      if (fileData) {
+        payload.fileData = fileData;
+      }
 
       console.log("Payload AJOUT:", JSON.stringify(payload, null, 2));
       successMessage = "Dépense ajoutée avec succès !";
@@ -478,8 +457,6 @@ depenseForm.addEventListener("submit", async (e) => {
     console.log("✓ Fetch terminé sans erreur");
     console.log("===== FIN SOUMISSION =====");
 
-    // Avec mode no-cors, on ne peut pas lire la réponse
-    // On considère que ça a fonctionné si pas d'erreur fetch
     alert(successMessage);
     depenseModal.classList.add("hidden");
     setTimeout(() => location.reload(), 500);
@@ -490,7 +467,7 @@ depenseForm.addEventListener("submit", async (e) => {
 });
 
 /**
- * NOUVELLE FONCTION : Convertit date CSV (JJ/MM/AAAA) vers format input HTML (YYYY-MM-DD)
+ * Convertit date CSV (JJ/MM/AAAA) vers format input HTML (YYYY-MM-DD)
  * @param {string} dateStr - Date au format "16/01/2026" ou "2026-01-16"
  * @returns {string} Date au format "2026-01-16"
  */
@@ -530,8 +507,7 @@ window.editDepense = function(date, fournisseur) {
 
   document.getElementById("modalTitle").textContent = "Modifier la dépense";
 
-  // IMPORTANT : Stocker la date au format BRUT du CSV (ex: "16/01/2026")
-  // pour pouvoir retrouver la ligne dans le backend
+  // Stocker la date au format BRUT du CSV pour pouvoir retrouver la ligne dans le backend
   const depenseIdValue = `${depense.date}|${fournisseur}`;
   document.getElementById("depenseId").value = depenseIdValue;
   console.log("depenseId défini à:", depenseIdValue);
@@ -548,7 +524,6 @@ window.editDepense = function(date, fournisseur) {
 
   // Calculer le taux de TVA à partir du montant TVA et HT
   const tauxTVA = depense.montant_ht > 0 ? (depense.tva / depense.montant_ht) * 100 : 20;
-  // Arrondir à 2 décimales SANS toFixed pour éviter problèmes de saisie
   document.getElementById("depenseTauxTVA").value = Math.round(tauxTVA * 100) / 100;
 
   document.getElementById("depensePaiement").value = depense.paiement;
@@ -590,8 +565,6 @@ window.deleteDepense = async function(date, fournisseur) {
 
     console.log("6. Suppression envoyée avec succès");
 
-    // Avec mode no-cors, on ne peut pas lire la réponse
-    // On considère que ça a fonctionné si pas d'erreur fetch
     setTimeout(() => {
       location.reload();
     }, 500);
@@ -600,4 +573,3 @@ window.deleteDepense = async function(date, fournisseur) {
     alert("Erreur lors de la suppression: " + error.message);
   }
 };
-

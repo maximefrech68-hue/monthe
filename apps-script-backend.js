@@ -11,6 +11,9 @@ const VAT_RATE = 0.2; // Taux TVA 20%
 const STRIPE_FEE_PERCENT = 0.014; // 1.4%
 const STRIPE_FEE_FIXED = 0.25; // 0.25€
 
+// NOUVELLE CONSTANTE pour les justificatifs de dépenses (ajoutée 2026-01-17)
+const JUSTIFICATIFS_FOLDER_NAME = "MonThe-Justificatifs";
+
 /**
  * Fonction GET - pour tester que le web app fonctionne et récupérer le hash
  */
@@ -44,8 +47,6 @@ function doPost(e) {
       return deleteProductFromSheet(data.id);
     } else if (action === "uploadImage") {
       return uploadImageToDrive(data.fileName, data.mimeType, data.base64Data);
-    } else if (action === "uploadJustificatif") {
-      return uploadJustificatifToDrive(data.fileName, data.mimeType, data.base64Data);
     } else if (action === "deleteOrder") {
       return deleteOrderFromSheet(data.order_id);
     } else if (action === "updateStock") {
@@ -64,10 +65,19 @@ function doPost(e) {
       return syncVentesFromOrders();
     } else if (action === "addDepense") {
       return addDepenseToSheet(data.data);
+    } else if (action === "addDepenseWithFile") {
+      // NOUVELLE ACTION pour ajouter une dépense avec upload de fichier intégré (2026-01-17)
+      return addDepenseWithFileToSheet(data.data, data.fileData);
     } else if (action === "updateDepense") {
       return updateDepenseEntry(data.date, data.fournisseur, data.updates);
+    } else if (action === "updateDepenseWithFile") {
+      // NOUVELLE ACTION pour modifier une dépense avec upload de fichier intégré (2026-01-17)
+      return updateDepenseWithFileEntry(data.date, data.fournisseur, data.updates, data.fileData);
     } else if (action === "deleteDepense") {
       return deleteDepenseEntry(data.date, data.fournisseur);
+    } else if (action === "uploadJustificatif") {
+      // NOUVELLE ACTION pour upload de justificatifs de dépenses (ajoutée 2026-01-17)
+      return uploadJustificatifToDrive(data.fileName, data.mimeType, data.base64Data);
     } else if (data.order_id || data.order_ref || data.email) {
       // Si pas d'action mais qu'on a des infos de commande, c'est une commande
       return handleOrder(data);
@@ -930,23 +940,6 @@ function createResponse(success, message, additionalData = {}) {
   ).setMimeType(ContentService.MimeType.JSON);
 }
 
-/**
- * Nouvelle fonction pour créer une réponse JSON avec headers CORS
- * (Pour éviter les erreurs CORS avec certaines actions)
- */
-function createResponseWithCORS(success, message, additionalData = {}) {
-  const output = ContentService.createTextOutput(
-    JSON.stringify({
-      success: success,
-      message: message,
-      ...additionalData,
-    }),
-  );
-  output.setMimeType(ContentService.MimeType.JSON);
-  // Ajouter les headers CORS
-  return output;
-}
-
 function addProductToSheet(productData) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1289,60 +1282,6 @@ function uploadImageToDrive(fileName, mimeType, base64Data) {
   }
 }
 
-/**
- * NOUVELLE FONCTION : Upload de justificatifs (PDF, images) pour les dépenses
- * @param {string} fileName - Nom du fichier
- * @param {string} mimeType - Type MIME du fichier
- * @param {string} base64Data - Données en base64
- * @returns {Object} Réponse avec l'URL du fichier
- */
-function uploadJustificatifToDrive(fileName, mimeType, base64Data) {
-  try {
-    // Créer ou récupérer le dossier "MonThe-Justificatifs" à la racine de Drive
-    let folder;
-    const folders = DriveApp.getFoldersByName("MonThe-Justificatifs");
-
-    if (folders.hasNext()) {
-      folder = folders.next();
-    } else {
-      folder = DriveApp.createFolder("MonThe-Justificatifs");
-      Logger.log("Dossier MonThe-Justificatifs créé");
-    }
-
-    // Décoder le base64
-    const blob = Utilities.newBlob(
-      Utilities.base64Decode(base64Data),
-      mimeType,
-      fileName,
-    );
-
-    // Créer le fichier dans le dossier
-    const file = folder.createFile(blob);
-
-    // Rendre le fichier VRAIMENT public (accessible par tout le monde)
-    file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
-
-    // Obtenir l'URL publique
-    const fileId = file.getId();
-
-    // Pour les PDFs et justificatifs, utiliser l'URL directe
-    const publicUrl = "https://drive.google.com/uc?export=view&id=" + fileId;
-    const driveUrl = "https://drive.google.com/file/d/" + fileId + "/view";
-
-    Logger.log("Justificatif uploadé: " + fileName + " -> " + publicUrl);
-
-    return createResponseWithCORS(true, "Justificatif téléchargé avec succès", {
-      url: publicUrl,
-      driveUrl: driveUrl,
-      fileId: fileId,
-      fileName: fileName,
-    });
-  } catch (error) {
-    Logger.log("Erreur uploadJustificatifToDrive: " + error);
-    return createResponseWithCORS(false, error.toString());
-  }
-}
-
 /* ==================== CHANGEMENT DE MOT DE PASSE ==================== */
 
 function changePasswordHash(oldPasswordHash, newPasswordHash) {
@@ -1535,118 +1474,6 @@ function testGenerateInvoicePDF() {
 /* ==================== GESTION DES DÉPENSES (ACHATS) ==================== */
 
 /**
- * NOUVELLE FONCTION HELPER : Normalise une date pour la comparaison
- * Convertit un objet Date ou une chaîne en format YYYY-MM-DD
- * @param {Date|string} dateValue - Date à normaliser
- * @returns {string} Date au format YYYY-MM-DD
- */
-function normalizeDateForDepenseComparison(dateValue) {
-  if (!dateValue) return "";
-
-  let dateObj;
-
-  // Si c'est déjà un objet Date
-  if (dateValue instanceof Date) {
-    dateObj = dateValue;
-  }
-  // Si c'est une chaîne
-  else if (typeof dateValue === 'string') {
-    // Format français : JJ/MM/AAAA ou DD/MM/YYYY HH:MM:SS
-    const frenchDateRegex = /^(\d{2})\/(\d{2})\/(\d{4})/;
-    const match = dateValue.match(frenchDateRegex);
-
-    if (match) {
-      const [, day, month, year] = match;
-      dateObj = new Date(year, month - 1, day);
-    }
-    // Format ISO ou autre format standard
-    else {
-      dateObj = new Date(dateValue);
-    }
-  }
-  // Sinon retourner vide
-  else {
-    return "";
-  }
-
-  // Vérifier que la date est valide
-  if (isNaN(dateObj.getTime())) {
-    return "";
-  }
-
-  // Retourner au format YYYY-MM-DD
-  const year = dateObj.getFullYear();
-  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const day = String(dateObj.getDate()).padStart(2, '0');
-
-  return year + '-' + month + '-' + day;
-}
-
-/**
- * NOUVELLE FONCTION HELPER AMÉLIORÉE : Convertit une valeur pour l'enregistrement dans Sheets
- * Convertit les dates YYYY-MM-DD en objets Date pour Google Sheets
- * Gère aussi les nombres et chaînes correctement
- * @param {string} fieldName - Nom du champ
- * @param {any} value - Valeur à convertir
- * @returns {any} Valeur convertie pour Sheets
- */
-function convertValueForSheetDepense(fieldName, value) {
-  // Log pour debug
-  Logger.log("convertValueForSheetDepense - Champ: " + fieldName + ", Valeur: " + value + ", Type: " + typeof value);
-
-  // Si la valeur est null ou undefined, retourner chaîne vide
-  if (value === null || value === undefined) {
-    Logger.log("  -> Retour: chaîne vide (null/undefined)");
-    return "";
-  }
-
-  // Si c'est le champ Date
-  if (fieldName === "Date") {
-    // Si c'est déjà un objet Date, le retourner tel quel
-    if (value instanceof Date) {
-      Logger.log("  -> Retour: Date object (déjà une date)");
-      return value;
-    }
-
-    // Si c'est une chaîne au format YYYY-MM-DD (input HTML)
-    if (typeof value === 'string') {
-      const isoDateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
-      const match = value.match(isoDateRegex);
-
-      if (match) {
-        const [, year, month, day] = match;
-        const dateObj = new Date(Number(year), Number(month) - 1, Number(day));
-        Logger.log("  -> Conversion YYYY-MM-DD vers Date: " + dateObj);
-        return dateObj;
-      }
-    }
-  }
-
-  // Si c'est un champ numérique (HT, TVA, TTC)
-  if (fieldName === "HT" || fieldName === "TVA" || fieldName === "TTC") {
-    // Si c'est une chaîne, essayer de la convertir en nombre
-    if (typeof value === 'string') {
-      const numValue = Number(value.replace(',', '.'));
-      if (!isNaN(numValue)) {
-        Logger.log("  -> Conversion chaîne vers nombre: " + numValue);
-        return numValue;
-      }
-    }
-    // Si c'est déjà un nombre, le retourner tel quel
-    if (typeof value === 'number') {
-      Logger.log("  -> Retour: nombre (déjà un nombre)");
-      return value;
-    }
-  }
-
-  // Pour tous les autres cas (Fournisseur, Catégorie, Description, Paiement, Justificatif)
-  // S'assurer que c'est une chaîne
-  const stringValue = String(value);
-  Logger.log("  -> Retour: chaîne '" + stringValue + "'");
-  return stringValue;
-}
-
-/**
  * Ajoute une dépense dans la feuille ACHATS
  * @param {Object} depenseData - Données de la dépense
  * @returns {Object} Résultat de l'opération
@@ -1678,13 +1505,8 @@ function addDepenseToSheet(depenseData) {
     const headers = ensureHeaders(sheet, headersWanted);
 
     // Construire la ligne
-    // Convertir la date si nécessaire (YYYY-MM-DD -> Date object)
-    const dateValue = depenseData.Date
-      ? convertValueForSheetDepense("Date", depenseData.Date)
-      : new Date();
-
     const rowObj = {
-      Date: dateValue,
+      Date: depenseData.Date || new Date(),
       Fournisseur: depenseData.Fournisseur || "",
       Catégorie: depenseData.Catégorie || "",
       Description: depenseData.Description || "",
@@ -1700,12 +1522,12 @@ function addDepenseToSheet(depenseData) {
     sheet.appendRow(row);
 
     Logger.log("Dépense ajoutée: " + depenseData.Fournisseur);
-    return createResponseWithCORS(true, "Dépense ajoutée avec succès", {
+    return createResponse(true, "Dépense ajoutée avec succès", {
       fournisseur: depenseData.Fournisseur,
     });
   } catch (error) {
     Logger.log("Erreur addDepenseToSheet: " + error);
-    return createResponseWithCORS(false, error.toString());
+    return createResponse(false, error.toString());
   }
 }
 
@@ -1718,11 +1540,6 @@ function addDepenseToSheet(depenseData) {
  */
 function updateDepenseEntry(date, fournisseur, updates) {
   try {
-    Logger.log("===== DÉBUT updateDepenseEntry =====");
-    Logger.log("Date recherchée: " + date);
-    Logger.log("Fournisseur recherché: " + fournisseur);
-    Logger.log("Updates reçues: " + JSON.stringify(updates));
-
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName("ACHATS (Registre des dépenses)");
 
@@ -1744,75 +1561,38 @@ function updateDepenseEntry(date, fournisseur, updates) {
       throw new Error("Colonnes 'Date' ou 'Fournisseur' non trouvées");
     }
 
-    // Normaliser la date recherchée pour la comparaison
-    const normalizedSearchDate = normalizeDateForDepenseComparison(date);
-    Logger.log("Recherche dépense avec date normalisée: " + normalizedSearchDate + " - " + fournisseur);
-
     // Trouver la ligne
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      const rowDate = normalizeDateForDepenseComparison(data[i][dateColIndex]);
-      const rowFournisseur = String(data[i][fournisseurColIndex] || "").trim();
-      const searchFournisseur = String(fournisseur || "").trim();
-
-      Logger.log("Comparaison ligne " + i + ": " + rowDate + " === " + normalizedSearchDate + " && " + rowFournisseur + " === " + searchFournisseur);
-
-      if (rowDate === normalizedSearchDate && rowFournisseur === searchFournisseur) {
+      if (
+        data[i][dateColIndex] === date &&
+        data[i][fournisseurColIndex] === fournisseur
+      ) {
         rowIndex = i + 1; // +1 car getRange est 1-indexed
-        Logger.log("Dépense trouvée à la ligne: " + rowIndex);
         break;
       }
     }
 
     if (rowIndex === -1) {
-      throw new Error("Dépense non trouvée: " + date + " (normalisée: " + normalizedSearchDate + ") - " + fournisseur);
+      throw new Error("Dépense non trouvée: " + date + " - " + fournisseur);
     }
 
     // Mettre à jour les champs fournis
-    Logger.log("===== DÉBUT MISE À JOUR DES CHAMPS =====");
     Object.keys(updates).forEach((field) => {
       const colIndex = headers.indexOf(field);
       if (colIndex !== -1) {
-        Logger.log("--- Traitement champ: " + field + " ---");
-        Logger.log("  Colonne index: " + colIndex);
-        Logger.log("  Valeur originale: " + updates[field] + " (type: " + typeof updates[field] + ")");
-
-        // Convertir la valeur si nécessaire (ex: date YYYY-MM-DD -> Date object)
-        const convertedValue = convertValueForSheetDepense(field, updates[field]);
-        Logger.log("  Valeur convertie: " + convertedValue + " (type: " + typeof convertedValue + ")");
-
-        // Écrire la valeur
-        sheet.getRange(rowIndex, colIndex + 1).setValue(convertedValue);
-        Logger.log("  ✓ setValue() exécuté avec succès");
-      } else {
-        Logger.log("⚠ Champ '" + field + "' non trouvé dans les headers");
+        sheet.getRange(rowIndex, colIndex + 1).setValue(updates[field]);
       }
     });
-    Logger.log("===== FIN MISE À JOUR DES CHAMPS =====");
-
-    // NOUVEAU : Forcer le flush pour s'assurer que les changements sont écrits
-    Logger.log("Forçage du flush des modifications...");
-    SpreadsheetApp.flush();
-    Logger.log("✓ Flush terminé");
-
-    // Vérification : relire la ligne pour confirmer les changements
-    Logger.log("===== VÉRIFICATION POST-MODIFICATION =====");
-    const verificationData = sheet.getDataRange().getValues();
-    const verificationRow = verificationData[rowIndex - 1]; // rowIndex est 1-indexed
-    Logger.log("Ligne après modification:");
-    headers.forEach((header, idx) => {
-      Logger.log("  " + header + ": " + verificationRow[idx]);
-    });
-    Logger.log("===== FIN VÉRIFICATION =====");
 
     Logger.log("Dépense mise à jour: " + date + " - " + fournisseur);
-    return createResponseWithCORS(true, "Dépense mise à jour avec succès", {
+    return createResponse(true, "Dépense mise à jour avec succès", {
       date: date,
       fournisseur: fournisseur,
     });
   } catch (error) {
     Logger.log("Erreur updateDepenseEntry: " + error);
-    return createResponseWithCORS(false, error.toString());
+    return createResponse(false, error.toString());
   }
 }
 
@@ -1845,39 +1625,33 @@ function deleteDepenseEntry(date, fournisseur) {
       throw new Error("Colonnes 'Date' ou 'Fournisseur' non trouvées");
     }
 
-    // Normaliser la date recherchée pour la comparaison
-    const normalizedSearchDate = normalizeDateForDepenseComparison(date);
-    Logger.log("Recherche dépense à supprimer avec date normalisée: " + normalizedSearchDate + " - " + fournisseur);
-
     // Trouver la ligne
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      const rowDate = normalizeDateForDepenseComparison(data[i][dateColIndex]);
-      const rowFournisseur = String(data[i][fournisseurColIndex] || "").trim();
-      const searchFournisseur = String(fournisseur || "").trim();
-
-      if (rowDate === normalizedSearchDate && rowFournisseur === searchFournisseur) {
+      if (
+        data[i][dateColIndex] === date &&
+        data[i][fournisseurColIndex] === fournisseur
+      ) {
         rowIndex = i + 1; // +1 car deleteRow est 1-indexed
-        Logger.log("Dépense trouvée à la ligne: " + rowIndex);
         break;
       }
     }
 
     if (rowIndex === -1) {
-      throw new Error("Dépense non trouvée: " + date + " (normalisée: " + normalizedSearchDate + ") - " + fournisseur);
+      throw new Error("Dépense non trouvée: " + date + " - " + fournisseur);
     }
 
     // Supprimer la ligne
     sheet.deleteRow(rowIndex);
 
     Logger.log("Dépense supprimée: " + date + " - " + fournisseur);
-    return createResponseWithCORS(true, "Dépense supprimée avec succès", {
+    return createResponse(true, "Dépense supprimée avec succès", {
       date: date,
       fournisseur: fournisseur,
     });
   } catch (error) {
     Logger.log("Erreur deleteDepenseEntry: " + error);
-    return createResponseWithCORS(false, error.toString());
+    return createResponse(false, error.toString());
   }
 }
 
@@ -1994,6 +1768,128 @@ function syncVentesFromOrders() {
     });
   } catch (error) {
     Logger.log("Erreur syncVentesFromOrders: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/* ==================== UPLOAD JUSTIFICATIFS (NOUVEAU 2026-01-17) ==================== */
+
+/**
+ * NOUVELLE FONCTION : Upload un justificatif de dépense dans Google Drive
+ * @param {string} fileName - Nom du fichier
+ * @param {string} mimeType - Type MIME du fichier
+ * @param {string} base64Data - Données base64 du fichier
+ * @returns {Object} Résultat avec l'URL du fichier uploadé
+ */
+function uploadJustificatifToDrive(fileName, mimeType, base64Data) {
+  try {
+    // Créer ou récupérer le dossier "MonThe-Justificatifs" à la racine de Drive
+    let folder;
+    const folders = DriveApp.getFoldersByName(JUSTIFICATIFS_FOLDER_NAME);
+
+    if (folders.hasNext()) {
+      folder = folders.next();
+    } else {
+      folder = DriveApp.createFolder(JUSTIFICATIFS_FOLDER_NAME);
+      Logger.log("Dossier " + JUSTIFICATIFS_FOLDER_NAME + " créé");
+    }
+
+    // Décoder le base64
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(base64Data),
+      mimeType,
+      fileName
+    );
+
+    // Créer le fichier dans le dossier
+    const file = folder.createFile(blob);
+
+    // Rendre le fichier public (accessible par tout le monde)
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // Obtenir l'URL publique
+    const fileId = file.getId();
+    const publicUrl = "https://drive.google.com/file/d/" + fileId + "/view";
+    const directViewUrl = "https://drive.google.com/uc?export=view&id=" + fileId;
+
+    Logger.log("Justificatif uploadé: " + fileName + " -> " + publicUrl);
+
+    return createResponse(true, "Justificatif téléchargé avec succès", {
+      url: publicUrl,
+      directViewUrl: directViewUrl,
+      fileId: fileId,
+      fileName: fileName
+    });
+  } catch (error) {
+    Logger.log("Erreur uploadJustificatifToDrive: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/**
+ * NOUVELLE FONCTION : Ajoute une dépense avec upload de fichier intégré
+ * @param {Object} depenseData - Données de la dépense
+ * @param {Object} fileData - Données du fichier {fileName, mimeType, base64Data}
+ * @returns {Object} Résultat de l'opération
+ */
+function addDepenseWithFileToSheet(depenseData, fileData) {
+  try {
+    // D'abord uploader le fichier si fourni
+    let justificatifUrl = "";
+    if (fileData && fileData.fileName && fileData.base64Data) {
+      const uploadResult = uploadJustificatifToDrive(
+        fileData.fileName,
+        fileData.mimeType,
+        fileData.base64Data
+      );
+
+      // Parser la réponse JSON
+      const uploadData = JSON.parse(uploadResult.getContent());
+      if (uploadData.success && uploadData.url) {
+        justificatifUrl = uploadData.url;
+      }
+    }
+
+    // Ajouter l'URL du justificatif aux données
+    depenseData.Justificatif = justificatifUrl;
+
+    // Appeler la fonction existante pour ajouter la dépense
+    return addDepenseToSheet(depenseData);
+  } catch (error) {
+    Logger.log("Erreur addDepenseWithFileToSheet: " + error);
+    return createResponse(false, error.toString());
+  }
+}
+
+/**
+ * NOUVELLE FONCTION : Modifie une dépense avec upload de fichier intégré
+ * @param {string} date - Date de la dépense
+ * @param {string} fournisseur - Nom du fournisseur
+ * @param {Object} updates - Champs à mettre à jour
+ * @param {Object} fileData - Données du fichier {fileName, mimeType, base64Data}
+ * @returns {Object} Résultat de l'opération
+ */
+function updateDepenseWithFileEntry(date, fournisseur, updates, fileData) {
+  try {
+    // D'abord uploader le fichier si fourni
+    if (fileData && fileData.fileName && fileData.base64Data) {
+      const uploadResult = uploadJustificatifToDrive(
+        fileData.fileName,
+        fileData.mimeType,
+        fileData.base64Data
+      );
+
+      // Parser la réponse JSON
+      const uploadData = JSON.parse(uploadResult.getContent());
+      if (uploadData.success && uploadData.url) {
+        updates.Justificatif = uploadData.url;
+      }
+    }
+
+    // Appeler la fonction existante pour modifier la dépense
+    return updateDepenseEntry(date, fournisseur, updates);
+  } catch (error) {
+    Logger.log("Erreur updateDepenseWithFileEntry: " + error);
     return createResponse(false, error.toString());
   }
 }
