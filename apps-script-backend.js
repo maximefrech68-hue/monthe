@@ -1583,28 +1583,67 @@ function normalizeDateForDepenseComparison(dateValue) {
 }
 
 /**
- * NOUVELLE FONCTION HELPER : Convertit une valeur pour l'enregistrement dans Sheets
+ * NOUVELLE FONCTION HELPER AMÉLIORÉE : Convertit une valeur pour l'enregistrement dans Sheets
  * Convertit les dates YYYY-MM-DD en objets Date pour Google Sheets
+ * Gère aussi les nombres et chaînes correctement
  * @param {string} fieldName - Nom du champ
  * @param {any} value - Valeur à convertir
  * @returns {any} Valeur convertie pour Sheets
  */
 function convertValueForSheetDepense(fieldName, value) {
-  // Si c'est le champ Date et que c'est une chaîne au format YYYY-MM-DD
-  if (fieldName === "Date" && typeof value === 'string') {
-    // Format YYYY-MM-DD (de l'input HTML)
-    const isoDateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
-    const match = value.match(isoDateRegex);
+  // Log pour debug
+  Logger.log("convertValueForSheetDepense - Champ: " + fieldName + ", Valeur: " + value + ", Type: " + typeof value);
 
-    if (match) {
-      const [, year, month, day] = match;
-      // Créer un objet Date pour Google Sheets
-      return new Date(Number(year), Number(month) - 1, Number(day));
+  // Si la valeur est null ou undefined, retourner chaîne vide
+  if (value === null || value === undefined) {
+    Logger.log("  -> Retour: chaîne vide (null/undefined)");
+    return "";
+  }
+
+  // Si c'est le champ Date
+  if (fieldName === "Date") {
+    // Si c'est déjà un objet Date, le retourner tel quel
+    if (value instanceof Date) {
+      Logger.log("  -> Retour: Date object (déjà une date)");
+      return value;
+    }
+
+    // Si c'est une chaîne au format YYYY-MM-DD (input HTML)
+    if (typeof value === 'string') {
+      const isoDateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+      const match = value.match(isoDateRegex);
+
+      if (match) {
+        const [, year, month, day] = match;
+        const dateObj = new Date(Number(year), Number(month) - 1, Number(day));
+        Logger.log("  -> Conversion YYYY-MM-DD vers Date: " + dateObj);
+        return dateObj;
+      }
     }
   }
 
-  // Pour tous les autres cas, retourner la valeur telle quelle
-  return value;
+  // Si c'est un champ numérique (HT, TVA, TTC)
+  if (fieldName === "HT" || fieldName === "TVA" || fieldName === "TTC") {
+    // Si c'est une chaîne, essayer de la convertir en nombre
+    if (typeof value === 'string') {
+      const numValue = Number(value.replace(',', '.'));
+      if (!isNaN(numValue)) {
+        Logger.log("  -> Conversion chaîne vers nombre: " + numValue);
+        return numValue;
+      }
+    }
+    // Si c'est déjà un nombre, le retourner tel quel
+    if (typeof value === 'number') {
+      Logger.log("  -> Retour: nombre (déjà un nombre)");
+      return value;
+    }
+  }
+
+  // Pour tous les autres cas (Fournisseur, Catégorie, Description, Paiement, Justificatif)
+  // S'assurer que c'est une chaîne
+  const stringValue = String(value);
+  Logger.log("  -> Retour: chaîne '" + stringValue + "'");
+  return stringValue;
 }
 
 /**
@@ -1679,6 +1718,11 @@ function addDepenseToSheet(depenseData) {
  */
 function updateDepenseEntry(date, fournisseur, updates) {
   try {
+    Logger.log("===== DÉBUT updateDepenseEntry =====");
+    Logger.log("Date recherchée: " + date);
+    Logger.log("Fournisseur recherché: " + fournisseur);
+    Logger.log("Updates reçues: " + JSON.stringify(updates));
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName("ACHATS (Registre des dépenses)");
 
@@ -1725,15 +1769,26 @@ function updateDepenseEntry(date, fournisseur, updates) {
     }
 
     // Mettre à jour les champs fournis
+    Logger.log("===== DÉBUT MISE À JOUR DES CHAMPS =====");
     Object.keys(updates).forEach((field) => {
       const colIndex = headers.indexOf(field);
       if (colIndex !== -1) {
+        Logger.log("--- Traitement champ: " + field + " ---");
+        Logger.log("  Colonne index: " + colIndex);
+        Logger.log("  Valeur originale: " + updates[field] + " (type: " + typeof updates[field] + ")");
+
         // Convertir la valeur si nécessaire (ex: date YYYY-MM-DD -> Date object)
         const convertedValue = convertValueForSheetDepense(field, updates[field]);
-        Logger.log("Mise à jour champ " + field + ": " + updates[field] + " -> " + convertedValue);
+        Logger.log("  Valeur convertie: " + convertedValue + " (type: " + typeof convertedValue + ")");
+
+        // Écrire la valeur
         sheet.getRange(rowIndex, colIndex + 1).setValue(convertedValue);
+        Logger.log("  ✓ setValue() exécuté avec succès");
+      } else {
+        Logger.log("⚠ Champ '" + field + "' non trouvé dans les headers");
       }
     });
+    Logger.log("===== FIN MISE À JOUR DES CHAMPS =====");
 
     Logger.log("Dépense mise à jour: " + date + " - " + fournisseur);
     return createResponseWithCORS(true, "Dépense mise à jour avec succès", {
