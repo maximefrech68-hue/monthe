@@ -1790,6 +1790,21 @@ function updateDepenseEntry(date, fournisseur, updates) {
     });
     Logger.log("===== FIN MISE À JOUR DES CHAMPS =====");
 
+    // NOUVEAU : Forcer le flush pour s'assurer que les changements sont écrits
+    Logger.log("Forçage du flush des modifications...");
+    SpreadsheetApp.flush();
+    Logger.log("✓ Flush terminé");
+
+    // Vérification : relire la ligne pour confirmer les changements
+    Logger.log("===== VÉRIFICATION POST-MODIFICATION =====");
+    const verificationData = sheet.getDataRange().getValues();
+    const verificationRow = verificationData[rowIndex - 1]; // rowIndex est 1-indexed
+    Logger.log("Ligne après modification:");
+    headers.forEach((header, idx) => {
+      Logger.log("  " + header + ": " + verificationRow[idx]);
+    });
+    Logger.log("===== FIN VÉRIFICATION =====");
+
     Logger.log("Dépense mise à jour: " + date + " - " + fournisseur);
     return createResponseWithCORS(true, "Dépense mise à jour avec succès", {
       date: date,
