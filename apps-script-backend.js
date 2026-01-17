@@ -1583,6 +1583,31 @@ function normalizeDateForDepenseComparison(dateValue) {
 }
 
 /**
+ * NOUVELLE FONCTION HELPER : Convertit une valeur pour l'enregistrement dans Sheets
+ * Convertit les dates YYYY-MM-DD en objets Date pour Google Sheets
+ * @param {string} fieldName - Nom du champ
+ * @param {any} value - Valeur à convertir
+ * @returns {any} Valeur convertie pour Sheets
+ */
+function convertValueForSheetDepense(fieldName, value) {
+  // Si c'est le champ Date et que c'est une chaîne au format YYYY-MM-DD
+  if (fieldName === "Date" && typeof value === 'string') {
+    // Format YYYY-MM-DD (de l'input HTML)
+    const isoDateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+    const match = value.match(isoDateRegex);
+
+    if (match) {
+      const [, year, month, day] = match;
+      // Créer un objet Date pour Google Sheets
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+  }
+
+  // Pour tous les autres cas, retourner la valeur telle quelle
+  return value;
+}
+
+/**
  * Ajoute une dépense dans la feuille ACHATS
  * @param {Object} depenseData - Données de la dépense
  * @returns {Object} Résultat de l'opération
@@ -1614,8 +1639,13 @@ function addDepenseToSheet(depenseData) {
     const headers = ensureHeaders(sheet, headersWanted);
 
     // Construire la ligne
+    // Convertir la date si nécessaire (YYYY-MM-DD -> Date object)
+    const dateValue = depenseData.Date
+      ? convertValueForSheetDepense("Date", depenseData.Date)
+      : new Date();
+
     const rowObj = {
-      Date: depenseData.Date || new Date(),
+      Date: dateValue,
       Fournisseur: depenseData.Fournisseur || "",
       Catégorie: depenseData.Catégorie || "",
       Description: depenseData.Description || "",
@@ -1698,7 +1728,10 @@ function updateDepenseEntry(date, fournisseur, updates) {
     Object.keys(updates).forEach((field) => {
       const colIndex = headers.indexOf(field);
       if (colIndex !== -1) {
-        sheet.getRange(rowIndex, colIndex + 1).setValue(updates[field]);
+        // Convertir la valeur si nécessaire (ex: date YYYY-MM-DD -> Date object)
+        const convertedValue = convertValueForSheetDepense(field, updates[field]);
+        Logger.log("Mise à jour champ " + field + ": " + updates[field] + " -> " + convertedValue);
+        sheet.getRange(rowIndex, colIndex + 1).setValue(convertedValue);
       }
     });
 
