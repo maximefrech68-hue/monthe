@@ -1532,6 +1532,31 @@ function addDepenseToSheet(depenseData) {
 }
 
 /**
+ * NOUVELLE FONCTION HELPER (2026-01-17) : Normalise une date pour comparaison
+ * @param {string|Date} dateValue - Date à normaliser
+ * @returns {string} Date au format YYYY-MM-DD
+ */
+function normalizeDepenseDate(dateValue) {
+  if (!dateValue) return "";
+
+  // Si c'est une string, la retourner telle quelle
+  if (typeof dateValue === "string") {
+    return dateValue.trim();
+  }
+
+  // Si c'est un objet Date, le convertir en YYYY-MM-DD
+  if (dateValue instanceof Date) {
+    const year = dateValue.getFullYear();
+    const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+    const day = String(dateValue.getDate()).padStart(2, '0');
+    return year + "-" + month + "-" + day;
+  }
+
+  // Sinon, convertir en string
+  return String(dateValue).trim();
+}
+
+/**
  * Met à jour une dépense dans la feuille ACHATS
  * @param {string} date - Date de la dépense
  * @param {string} fournisseur - Nom du fournisseur
@@ -1561,19 +1586,28 @@ function updateDepenseEntry(date, fournisseur, updates) {
       throw new Error("Colonnes 'Date' ou 'Fournisseur' non trouvées");
     }
 
-    // Trouver la ligne
+    // Normaliser la date et fournisseur de recherche (NOUVEAU 2026-01-17)
+    const searchDate = normalizeDepenseDate(date);
+    const searchFournisseur = String(fournisseur || "").trim();
+
+    Logger.log("Recherche dépense - Date: " + searchDate + ", Fournisseur: " + searchFournisseur);
+
+    // Trouver la ligne (MODIFIÉ 2026-01-17 pour gérer les dates)
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      if (
-        data[i][dateColIndex] === date &&
-        data[i][fournisseurColIndex] === fournisseur
-      ) {
+      const rowDate = normalizeDepenseDate(data[i][dateColIndex]);
+      const rowFournisseur = String(data[i][fournisseurColIndex] || "").trim();
+
+      if (rowDate === searchDate && rowFournisseur === searchFournisseur) {
         rowIndex = i + 1; // +1 car getRange est 1-indexed
+        Logger.log("Ligne trouvée: " + rowIndex);
         break;
       }
     }
 
     if (rowIndex === -1) {
+      Logger.log("ERREUR: Dépense non trouvée");
+      Logger.log("Recherché: Date=" + searchDate + ", Fournisseur=" + searchFournisseur);
       throw new Error("Dépense non trouvée: " + date + " - " + fournisseur);
     }
 
@@ -1625,14 +1659,21 @@ function deleteDepenseEntry(date, fournisseur) {
       throw new Error("Colonnes 'Date' ou 'Fournisseur' non trouvées");
     }
 
-    // Trouver la ligne
+    // Normaliser la date et fournisseur de recherche (NOUVEAU 2026-01-17)
+    const searchDate = normalizeDepenseDate(date);
+    const searchFournisseur = String(fournisseur || "").trim();
+
+    Logger.log("Suppression dépense - Date: " + searchDate + ", Fournisseur: " + searchFournisseur);
+
+    // Trouver la ligne (MODIFIÉ 2026-01-17 pour gérer les dates)
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      if (
-        data[i][dateColIndex] === date &&
-        data[i][fournisseurColIndex] === fournisseur
-      ) {
+      const rowDate = normalizeDepenseDate(data[i][dateColIndex]);
+      const rowFournisseur = String(data[i][fournisseurColIndex] || "").trim();
+
+      if (rowDate === searchDate && rowFournisseur === searchFournisseur) {
         rowIndex = i + 1; // +1 car deleteRow est 1-indexed
+        Logger.log("Ligne à supprimer trouvée: " + rowIndex);
         break;
       }
     }
