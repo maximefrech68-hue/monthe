@@ -401,6 +401,9 @@ function getFileBase64(file) {
 depenseForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  // Récupérer le bouton submit
+  const submitBtn = depenseForm.querySelector('button[type="submit"]');
+
   const depenseId = document.getElementById("depenseId").value;
   const isEditMode = depenseId && depenseId.trim() !== "";
 
@@ -426,6 +429,14 @@ depenseForm.addEventListener("submit", async (e) => {
     return;
   }
 
+  // Désactiver le bouton et le griser
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = "0.6";
+    submitBtn.style.cursor = "not-allowed";
+    submitBtn.textContent = "⏳ Enregistrement...";
+  }
+
   // Préparer les données du fichier si présent
   let fileData = null;
   if (currentFile) {
@@ -445,6 +456,14 @@ depenseForm.addEventListener("submit", async (e) => {
     } catch (error) {
       console.error("Erreur préparation fichier:", error);
       alert("Erreur lors de la préparation du fichier. Veuillez réessayer.");
+
+      // Réactiver le bouton en cas d'erreur
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = "1";
+        submitBtn.style.cursor = "pointer";
+        submitBtn.textContent = "✓ Enregistrer";
+      }
       return;
     }
   }
@@ -534,6 +553,14 @@ depenseForm.addEventListener("submit", async (e) => {
   } catch (error) {
     console.error("Erreur:", error);
     alert("Erreur lors de l'opération: " + error.message);
+
+    // Réactiver le bouton en cas d'erreur
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = "1";
+      submitBtn.style.cursor = "pointer";
+      submitBtn.textContent = "✓ Enregistrer";
+    }
   }
 });
 
