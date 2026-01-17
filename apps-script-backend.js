@@ -1535,6 +1535,54 @@ function testGenerateInvoicePDF() {
 /* ==================== GESTION DES DÉPENSES (ACHATS) ==================== */
 
 /**
+ * NOUVELLE FONCTION HELPER : Normalise une date pour la comparaison
+ * Convertit un objet Date ou une chaîne en format YYYY-MM-DD
+ * @param {Date|string} dateValue - Date à normaliser
+ * @returns {string} Date au format YYYY-MM-DD
+ */
+function normalizeDateForDepenseComparison(dateValue) {
+  if (!dateValue) return "";
+
+  let dateObj;
+
+  // Si c'est déjà un objet Date
+  if (dateValue instanceof Date) {
+    dateObj = dateValue;
+  }
+  // Si c'est une chaîne
+  else if (typeof dateValue === 'string') {
+    // Format français : JJ/MM/AAAA ou DD/MM/YYYY HH:MM:SS
+    const frenchDateRegex = /^(\d{2})\/(\d{2})\/(\d{4})/;
+    const match = dateValue.match(frenchDateRegex);
+
+    if (match) {
+      const [, day, month, year] = match;
+      dateObj = new Date(year, month - 1, day);
+    }
+    // Format ISO ou autre format standard
+    else {
+      dateObj = new Date(dateValue);
+    }
+  }
+  // Sinon retourner vide
+  else {
+    return "";
+  }
+
+  // Vérifier que la date est valide
+  if (isNaN(dateObj.getTime())) {
+    return "";
+  }
+
+  // Retourner au format YYYY-MM-DD
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+
+  return year + '-' + month + '-' + day;
+}
+
+/**
  * Ajoute une dépense dans la feuille ACHATS
  * @param {Object} depenseData - Données de la dépense
  * @returns {Object} Résultat de l'opération
@@ -1622,20 +1670,28 @@ function updateDepenseEntry(date, fournisseur, updates) {
       throw new Error("Colonnes 'Date' ou 'Fournisseur' non trouvées");
     }
 
+    // Normaliser la date recherchée pour la comparaison
+    const normalizedSearchDate = normalizeDateForDepenseComparison(date);
+    Logger.log("Recherche dépense avec date normalisée: " + normalizedSearchDate + " - " + fournisseur);
+
     // Trouver la ligne
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      if (
-        data[i][dateColIndex] === date &&
-        data[i][fournisseurColIndex] === fournisseur
-      ) {
+      const rowDate = normalizeDateForDepenseComparison(data[i][dateColIndex]);
+      const rowFournisseur = String(data[i][fournisseurColIndex] || "").trim();
+      const searchFournisseur = String(fournisseur || "").trim();
+
+      Logger.log("Comparaison ligne " + i + ": " + rowDate + " === " + normalizedSearchDate + " && " + rowFournisseur + " === " + searchFournisseur);
+
+      if (rowDate === normalizedSearchDate && rowFournisseur === searchFournisseur) {
         rowIndex = i + 1; // +1 car getRange est 1-indexed
+        Logger.log("Dépense trouvée à la ligne: " + rowIndex);
         break;
       }
     }
 
     if (rowIndex === -1) {
-      throw new Error("Dépense non trouvée: " + date + " - " + fournisseur);
+      throw new Error("Dépense non trouvée: " + date + " (normalisée: " + normalizedSearchDate + ") - " + fournisseur);
     }
 
     // Mettre à jour les champs fournis
@@ -1686,20 +1742,26 @@ function deleteDepenseEntry(date, fournisseur) {
       throw new Error("Colonnes 'Date' ou 'Fournisseur' non trouvées");
     }
 
+    // Normaliser la date recherchée pour la comparaison
+    const normalizedSearchDate = normalizeDateForDepenseComparison(date);
+    Logger.log("Recherche dépense à supprimer avec date normalisée: " + normalizedSearchDate + " - " + fournisseur);
+
     // Trouver la ligne
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      if (
-        data[i][dateColIndex] === date &&
-        data[i][fournisseurColIndex] === fournisseur
-      ) {
+      const rowDate = normalizeDateForDepenseComparison(data[i][dateColIndex]);
+      const rowFournisseur = String(data[i][fournisseurColIndex] || "").trim();
+      const searchFournisseur = String(fournisseur || "").trim();
+
+      if (rowDate === normalizedSearchDate && rowFournisseur === searchFournisseur) {
         rowIndex = i + 1; // +1 car deleteRow est 1-indexed
+        Logger.log("Dépense trouvée à la ligne: " + rowIndex);
         break;
       }
     }
 
     if (rowIndex === -1) {
-      throw new Error("Dépense non trouvée: " + date + " - " + fournisseur);
+      throw new Error("Dépense non trouvée: " + date + " (normalisée: " + normalizedSearchDate + ") - " + fournisseur);
     }
 
     // Supprimer la ligne
