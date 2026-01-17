@@ -489,6 +489,30 @@ depenseForm.addEventListener("submit", async (e) => {
   }
 });
 
+/**
+ * NOUVELLE FONCTION : Convertit date CSV (JJ/MM/AAAA) vers format input HTML (YYYY-MM-DD)
+ * @param {string} dateStr - Date au format "16/01/2026" ou "2026-01-16"
+ * @returns {string} Date au format "2026-01-16"
+ */
+function convertDateToInputFormat(dateStr) {
+  if (!dateStr) return "";
+
+  // Si déjà au format YYYY-MM-DD, retourner tel quel
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+
+  // Si format JJ/MM/AAAA (du CSV)
+  const match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (match) {
+    const [, day, month, year] = match;
+    return `${year}-${month}-${day}`;
+  }
+
+  // Sinon retourner tel quel
+  return dateStr;
+}
+
 // Modifier une dépense
 window.editDepense = function(date, fournisseur) {
   console.log("===== editDepense appelée =====");
@@ -505,10 +529,18 @@ window.editDepense = function(date, fournisseur) {
   console.log("Dépense trouvée:", depense);
 
   document.getElementById("modalTitle").textContent = "Modifier la dépense";
-  const depenseIdValue = `${date}|${fournisseur}`;
+
+  // IMPORTANT : Stocker la date au format BRUT du CSV (ex: "16/01/2026")
+  // pour pouvoir retrouver la ligne dans le backend
+  const depenseIdValue = `${depense.date}|${fournisseur}`;
   document.getElementById("depenseId").value = depenseIdValue;
   console.log("depenseId défini à:", depenseIdValue);
-  document.getElementById("depenseDate").value = depense.date;
+  console.log("Format date brute du CSV:", depense.date);
+
+  // Convertir la date du format CSV (16/01/2026) vers format input HTML (2026-01-16)
+  const dateInputValue = convertDateToInputFormat(depense.date);
+  console.log("Date convertie pour input:", dateInputValue);
+  document.getElementById("depenseDate").value = dateInputValue;
   document.getElementById("depenseFournisseur").value = depense.fournisseur;
   document.getElementById("depenseCategorie").value = depense.categorie;
   document.getElementById("depenseDescription").value = depense.description;
