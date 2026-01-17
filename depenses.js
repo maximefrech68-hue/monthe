@@ -241,6 +241,23 @@ resetFilters.addEventListener("click", () => {
   renderTable();
 });
 
+// Fonction pour échapper les cellules CSV (séparateur point-virgule)
+function escapeCSVCell(cell) {
+  if (cell == null) return "";
+  const str = String(cell);
+  // Si la cellule contient des guillemets, point-virgules, retours à la ligne, on l'encadre de guillemets
+  if (
+    str.includes('"') ||
+    str.includes(";") ||
+    str.includes("\n") ||
+    str.includes("\r")
+  ) {
+    // Doubler les guillemets à l'intérieur selon la norme RFC 4180
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
 // Export CSV
 exportCSV.addEventListener("click", () => {
   const filtered = getFilteredDepenses();
@@ -268,13 +285,22 @@ exportCSV.addEventListener("click", () => {
     d.justificatif,
   ]);
 
-  const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv" });
+  // Échapper toutes les cellules et joindre avec point-virgule (standard européen)
+  const csvLines = [headers, ...rows]
+    .map((row) => row.map(escapeCSVCell).join(";"))
+    .join("\r\n");
+
+  // Ajouter BOM UTF-8 pour qu'Excel reconnaisse l'encodage
+  const BOM = "\uFEFF";
+  const csvContent = BOM + csvLines;
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = `depenses_${new Date().toISOString().split("T")[0]}.csv`;
   a.click();
+  URL.revokeObjectURL(url);
 });
 
 // Modal - Ajouter
