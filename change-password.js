@@ -1,8 +1,9 @@
 // Configuration
 // Hash SHA-256 du mot de passe par défaut (fallback)
-const DEFAULT_PASSWORD_HASH = "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
+const DEFAULT_PASSWORD_HASH =
+  "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+  "https://script.google.com/macros/s/AKfycbwrcI_QuLKJtwYFDVwG1V7Z5xjWDRnT9ajYN5J5oY1reNzLStr8uG_WlUV8a2Adr6Y3/exec";
 
 // Hash actuel (sera récupéré depuis Google Sheets ou utilisera le défaut)
 let ADMIN_PASSWORD_HASH = DEFAULT_PASSWORD_HASH;
@@ -14,19 +15,21 @@ const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
 // Fonction de hashage SHA-256
 async function hashPassword(password) {
   const msgBuffer = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return hashHex;
 }
 
 // Fonction pour récupérer le hash depuis Google Sheets
 async function fetchPasswordHash() {
   // Vérifier d'abord le cache
-  const cachedHash = sessionStorage.getItem('adminPasswordHash');
+  const cachedHash = sessionStorage.getItem("adminPasswordHash");
   if (cachedHash) {
     ADMIN_PASSWORD_HASH = cachedHash;
-    console.log('Hash chargé depuis le cache');
+    console.log("Hash chargé depuis le cache");
     return;
   }
 
@@ -37,13 +40,16 @@ async function fetchPasswordHash() {
     if (data.success && data.hash) {
       ADMIN_PASSWORD_HASH = data.hash;
       // Mettre en cache pour les prochaines pages
-      sessionStorage.setItem('adminPasswordHash', data.hash);
-      console.log('Hash personnalisé chargé depuis Google Sheets');
+      sessionStorage.setItem("adminPasswordHash", data.hash);
+      console.log("Hash personnalisé chargé depuis Google Sheets");
     } else {
-      console.log('Utilisation du hash par défaut');
+      console.log("Utilisation du hash par défaut");
     }
   } catch (error) {
-    console.warn('Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:', error);
+    console.warn(
+      "Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:",
+      error,
+    );
   }
 }
 
@@ -67,7 +73,10 @@ function getLoginAttempts() {
 }
 
 function saveLoginAttempts(count, blockedUntil = null) {
-  localStorage.setItem("changePasswordAttempts", JSON.stringify({ count, blockedUntil }));
+  localStorage.setItem(
+    "changePasswordAttempts",
+    JSON.stringify({ count, blockedUntil }),
+  );
 }
 
 function isBlocked() {
@@ -104,7 +113,7 @@ function formatTimeRemaining(blockedUntil) {
   const remaining = Math.ceil((blockedUntil - Date.now()) / 1000);
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function updateLockoutMessage(blockedUntil) {
@@ -224,7 +233,9 @@ changePasswordForm.addEventListener("submit", async (e) => {
       // Pas encore bloqué
       const attempts = getLoginAttempts();
       const remaining = MAX_ATTEMPTS - attempts.count;
-      showError(`Mot de passe actuel incorrect. ${remaining} tentative(s) restante(s).`);
+      showError(
+        `Mot de passe actuel incorrect. ${remaining} tentative(s) restante(s).`,
+      );
     }
     return;
   }
@@ -256,14 +267,17 @@ changePasswordForm.addEventListener("submit", async (e) => {
     resetLoginAttempts();
     if (lockoutTimer) clearTimeout(lockoutTimer);
 
-    showSuccess("Mot de passe changé avec succès ! IMPORTANT : Notez le nouveau hash ci-dessous pour mettre à jour vos fichiers JS si nécessaire.");
+    showSuccess(
+      "Mot de passe changé avec succès ! IMPORTANT : Notez le nouveau hash ci-dessous pour mettre à jour vos fichiers JS si nécessaire.",
+    );
 
     // Afficher le nouveau hash pour l'utilisateur
     const hashDisplay = document.createElement("div");
-    hashDisplay.style.cssText = "background: #f7f4ef; padding: 1rem; border-radius: 8px; margin-top: 1rem; word-break: break-all; font-family: monospace; font-size: 12px;";
+    hashDisplay.style.cssText =
+      "background: #f7f4ef; padding: 1rem; border-radius: 8px; margin-top: 1rem; word-break: break-all; font-family: monospace; font-size: 12px;";
     hashDisplay.innerHTML = `<strong>Nouveau hash SHA-256 :</strong><br>${newPasswordHash}<br><br><small>⚠️ Conservez ce hash en lieu sûr. Il a été enregistré dans Google Sheets pour une utilisation future.</small>`;
 
-    changePasswordForm.insertAdjacentElement('afterend', hashDisplay);
+    changePasswordForm.insertAdjacentElement("afterend", hashDisplay);
 
     // Réinitialiser le formulaire
     changePasswordForm.reset();
@@ -272,10 +286,11 @@ changePasswordForm.addEventListener("submit", async (e) => {
     setTimeout(() => {
       sessionStorage.removeItem("adminAuth");
       sessionStorage.removeItem("adminPasswordHash");
-      alert("Vous allez être déconnecté. Reconnectez-vous avec votre nouveau mot de passe.");
+      alert(
+        "Vous allez être déconnecté. Reconnectez-vous avec votre nouveau mot de passe.",
+      );
       window.location.href = "admin.html";
     }, 5000);
-
   } catch (error) {
     console.error("Erreur:", error);
     showError("Erreur lors du changement de mot de passe. Veuillez réessayer.");
@@ -289,13 +304,13 @@ changePasswordForm.addEventListener("submit", async (e) => {
 logoutBtn.addEventListener("click", () => {
   if (confirm("Voulez-vous vraiment vous déconnecter ?")) {
     sessionStorage.removeItem("adminAuth");
-      sessionStorage.removeItem("adminPasswordHash");
+    sessionStorage.removeItem("adminPasswordHash");
     window.location.href = "index.html";
   }
 });
 
 // Initialisation
-(async function() {
+(async function () {
   // Vérifier l'auth d'abord (redirection si non authentifié)
   checkAuth();
   checkIfBlocked();

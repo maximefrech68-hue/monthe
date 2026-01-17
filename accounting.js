@@ -1,10 +1,11 @@
 // Configuration
 // Hash SHA-256 du mot de passe par défaut (fallback)
-const DEFAULT_PASSWORD_HASH = "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
+const DEFAULT_PASSWORD_HASH =
+  "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
 const VENTES_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=VENTES%20(Livre%20des%20recettes)";
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+  "https://script.google.com/macros/s/AKfycbwrcI_QuLKJtwYFDVwG1V7Z5xjWDRnT9ajYN5J5oY1reNzLStr8uG_WlUV8a2Adr6Y3/exec";
 
 // Hash actuel (sera récupéré depuis Google Sheets ou utilisera le défaut)
 let ADMIN_PASSWORD_HASH = DEFAULT_PASSWORD_HASH;
@@ -16,19 +17,21 @@ const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
 // Fonction de hashage SHA-256
 async function hashPassword(password) {
   const msgBuffer = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return hashHex;
 }
 
 // Fonction pour récupérer le hash depuis Google Sheets
 async function fetchPasswordHash() {
   // Vérifier d'abord le cache
-  const cachedHash = sessionStorage.getItem('adminPasswordHash');
+  const cachedHash = sessionStorage.getItem("adminPasswordHash");
   if (cachedHash) {
     ADMIN_PASSWORD_HASH = cachedHash;
-    console.log('Hash chargé depuis le cache');
+    console.log("Hash chargé depuis le cache");
     return;
   }
 
@@ -39,13 +42,16 @@ async function fetchPasswordHash() {
     if (data.success && data.hash) {
       ADMIN_PASSWORD_HASH = data.hash;
       // Mettre en cache pour les prochaines pages
-      sessionStorage.setItem('adminPasswordHash', data.hash);
-      console.log('Hash personnalisé chargé depuis Google Sheets');
+      sessionStorage.setItem("adminPasswordHash", data.hash);
+      console.log("Hash personnalisé chargé depuis Google Sheets");
     } else {
-      console.log('Utilisation du hash par défaut');
+      console.log("Utilisation du hash par défaut");
     }
   } catch (error) {
-    console.warn('Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:', error);
+    console.warn(
+      "Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:",
+      error,
+    );
   }
 }
 
@@ -85,7 +91,10 @@ function getLoginAttempts() {
 }
 
 function saveLoginAttempts(count, blockedUntil = null) {
-  localStorage.setItem("adminLoginAttempts", JSON.stringify({ count, blockedUntil }));
+  localStorage.setItem(
+    "adminLoginAttempts",
+    JSON.stringify({ count, blockedUntil }),
+  );
 }
 
 function isBlocked() {
@@ -122,7 +131,7 @@ function formatTimeRemaining(blockedUntil) {
   const remaining = Math.ceil((blockedUntil - Date.now()) / 1000);
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function updateLockoutMessage(blockedUntil) {
@@ -228,7 +237,9 @@ loginForm.addEventListener("submit", async (e) => {
       // Pas encore bloqué
       const attempts = getLoginAttempts();
       const remaining = MAX_ATTEMPTS - attempts.count;
-      showError(`Mot de passe incorrect. ${remaining} tentative(s) restante(s).`);
+      showError(
+        `Mot de passe incorrect. ${remaining} tentative(s) restante(s).`,
+      );
     }
   }
 });
@@ -268,8 +279,12 @@ async function fetchVentesFromSheet() {
       v.montant_ht = Number(String(v["Montant HT"] || "0").replace(",", "."));
       v.tva = Number(String(v["TVA"] || "0").replace(",", "."));
       v.montant_ttc = Number(String(v["Montant TTC"] || "0").replace(",", "."));
-      v.frais_paiement = Number(String(v["Frais paiement"] || "0").replace(",", "."));
-      v.net_encaisse = Number(String(v["Net encaissé"] || "0").replace(",", "."));
+      v.frais_paiement = Number(
+        String(v["Frais paiement"] || "0").replace(",", "."),
+      );
+      v.net_encaisse = Number(
+        String(v["Net encaissé"] || "0").replace(",", "."),
+      );
 
       // Garder la date brute
       v.date_paiement = v["Date paiement"] || "";
@@ -284,7 +299,9 @@ async function fetchVentesFromSheet() {
     });
 
     // Trier par date décroissante (plus récent en premier)
-    ventes.sort((a, b) => new Date(b.date_paiement) - new Date(a.date_paiement));
+    ventes.sort(
+      (a, b) => new Date(b.date_paiement) - new Date(a.date_paiement),
+    );
 
     return ventes;
   } catch (error) {
@@ -341,7 +358,8 @@ function formatVenteDate(dateStr) {
 
   try {
     // Format français : JJ/MM/AAAA HH:MM:SS
-    const frenchDateRegex = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
+    const frenchDateRegex =
+      /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
     const match = dateStr.match(frenchDateRegex);
 
     if (match) {
@@ -409,9 +427,10 @@ function renderVentes(ventes) {
     const dateStr = formatVenteDate(v.date_paiement);
 
     // Lien de téléchargement facture
-    const invoiceLink = v.url_facture && v.url_facture.trim() !== ""
-      ? `<a href="${v.url_facture}" target="_blank" class="download-link" title="Télécharger la facture">📄 PDF</a>`
-      : "-";
+    const invoiceLink =
+      v.url_facture && v.url_facture.trim() !== ""
+        ? `<a href="${v.url_facture}" target="_blank" class="download-link" title="Télécharger la facture">📄 PDF</a>`
+        : "-";
 
     row.innerHTML = `
       <td><input type="checkbox" class="vente-checkbox" data-id="${v.order_id}" /></td>
@@ -456,7 +475,7 @@ function applyFilters() {
       (v) =>
         normalize(v.order_id).includes(q) ||
         normalize(v.client).includes(q) ||
-        normalize(v.produits).includes(q)
+        normalize(v.produits).includes(q),
     );
   }
 
@@ -471,7 +490,8 @@ function applyFilters() {
 
       let venteDate;
       try {
-        const frenchDateRegex = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
+        const frenchDateRegex =
+          /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
         const match = v.date_paiement.match(frenchDateRegex);
 
         if (match) {
@@ -485,7 +505,7 @@ function applyFilters() {
       }
 
       if (isNaN(venteDate.getTime())) {
-        console.warn('Date invalide:', v.date_paiement);
+        console.warn("Date invalide:", v.date_paiement);
         return false;
       }
 
@@ -550,10 +570,16 @@ function updateCascadeFilters(filteredVentes) {
   populateProductFilter(filteredVentes);
 
   // Restaurer les valeurs sélectionnées si elles existent toujours
-  if (currentClient && Array.from(clientFilterEl.options).some(o => o.value === currentClient)) {
+  if (
+    currentClient &&
+    Array.from(clientFilterEl.options).some((o) => o.value === currentClient)
+  ) {
     clientFilterEl.value = currentClient;
   }
-  if (currentProduct && Array.from(productFilterEl.options).some(o => o.value === currentProduct)) {
+  if (
+    currentProduct &&
+    Array.from(productFilterEl.options).some((o) => o.value === currentProduct)
+  ) {
     productFilterEl.value = currentProduct;
   }
 }
@@ -585,8 +611,8 @@ function populateProductFilter(ventes = allVentes) {
   ventes.forEach((v) => {
     if (v.produits && v.produits.trim() !== "") {
       // Diviser les produits séparés par virgule
-      const productList = v.produits.split(",").map(p => p.trim());
-      productList.forEach(p => {
+      const productList = v.produits.split(",").map((p) => p.trim());
+      productList.forEach((p) => {
         if (p !== "") products.add(p);
       });
     }
@@ -626,7 +652,8 @@ accountingBody.addEventListener("click", async (e) => {
 function calculateAmounts() {
   const ttc = parseFloat(document.getElementById("editMontantTTC").value) || 0;
   const tauxTVA = parseFloat(document.getElementById("editTauxTVA").value) || 0;
-  const frais = parseFloat(document.getElementById("editFraisPaiement").value) || 0;
+  const frais =
+    parseFloat(document.getElementById("editFraisPaiement").value) || 0;
 
   // Calculs
   const ht = ttc / (1 + tauxTVA / 100);
@@ -646,21 +673,32 @@ function showEditModal(orderId) {
 
   // Remplir le formulaire
   document.getElementById("editOrderId").value = vente.order_id;
-  document.getElementById("editMontantTTC").value = vente.montant_ttc.toFixed(2);
+  document.getElementById("editMontantTTC").value =
+    vente.montant_ttc.toFixed(2);
 
   // Calculer le taux TVA depuis les données existantes
-  const tauxTVA = vente.montant_ttc > 0 ? ((vente.tva / (vente.montant_ttc - vente.tva)) * 100) : 20;
+  const tauxTVA =
+    vente.montant_ttc > 0
+      ? (vente.tva / (vente.montant_ttc - vente.tva)) * 100
+      : 20;
   document.getElementById("editTauxTVA").value = tauxTVA.toFixed(2);
 
-  document.getElementById("editFraisPaiement").value = vente.frais_paiement.toFixed(2);
+  document.getElementById("editFraisPaiement").value =
+    vente.frais_paiement.toFixed(2);
 
   // Calculer et afficher les montants
   calculateAmounts();
 
   // Ajouter les listeners pour recalcul automatique
-  document.getElementById("editMontantTTC").addEventListener("input", calculateAmounts);
-  document.getElementById("editTauxTVA").addEventListener("input", calculateAmounts);
-  document.getElementById("editFraisPaiement").addEventListener("input", calculateAmounts);
+  document
+    .getElementById("editMontantTTC")
+    .addEventListener("input", calculateAmounts);
+  document
+    .getElementById("editTauxTVA")
+    .addEventListener("input", calculateAmounts);
+  document
+    .getElementById("editFraisPaiement")
+    .addEventListener("input", calculateAmounts);
 
   // Afficher le modal
   editModal.classList.remove("hidden");
@@ -686,9 +724,13 @@ editForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const orderId = document.getElementById("editOrderId").value;
-  const montantTTC = parseFloat(document.getElementById("editMontantTTC").value);
+  const montantTTC = parseFloat(
+    document.getElementById("editMontantTTC").value,
+  );
   const tauxTVA = parseFloat(document.getElementById("editTauxTVA").value);
-  const fraisPaiement = parseFloat(document.getElementById("editFraisPaiement").value);
+  const fraisPaiement = parseFloat(
+    document.getElementById("editFraisPaiement").value,
+  );
 
   if (!orderId || isNaN(montantTTC) || isNaN(tauxTVA) || isNaN(fraisPaiement)) {
     alert("Veuillez remplir tous les champs obligatoires.");
@@ -705,9 +747,9 @@ editForm.addEventListener("submit", async (e) => {
         order_id: orderId,
         updates: {
           "Montant TTC": montantTTC,
-          "taux_tva": tauxTVA,
-          "Frais paiement": fraisPaiement
-        }
+          taux_tva: tauxTVA,
+          "Frais paiement": fraisPaiement,
+        },
       }),
     });
 
@@ -745,7 +787,12 @@ async function deleteVente(orderId) {
 function escapeCSVCell(cell) {
   if (cell == null) return "";
   const str = String(cell);
-  if (str.includes('"') || str.includes(";") || str.includes("\n") || str.includes("\r")) {
+  if (
+    str.includes('"') ||
+    str.includes(";") ||
+    str.includes("\n") ||
+    str.includes("\r")
+  ) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
@@ -809,7 +856,7 @@ exportBtn.addEventListener("click", () => {
   link.setAttribute("href", url);
   link.setAttribute(
     "download",
-    `comptabilite_ventes_${new Date().toISOString().split("T")[0]}.csv`
+    `comptabilite_ventes_${new Date().toISOString().split("T")[0]}.csv`,
   );
   link.style.visibility = "hidden";
   document.body.appendChild(link);
@@ -861,7 +908,7 @@ async function init() {
 }
 
 // Initialiser: vérifier l'auth d'abord, puis récupérer le hash en arrière-plan
-(async function() {
+(async function () {
   const isAuthenticated = sessionStorage.getItem("adminAuth") === "true";
 
   if (isAuthenticated) {

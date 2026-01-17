@@ -1,10 +1,11 @@
 // Configuration
 // Hash SHA-256 du mot de passe par défaut (fallback)
-const DEFAULT_PASSWORD_HASH = "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
+const DEFAULT_PASSWORD_HASH =
+  "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
 const ORDERS_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=Orders";
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+  "https://script.google.com/macros/s/AKfycbwrcI_QuLKJtwYFDVwG1V7Z5xjWDRnT9ajYN5J5oY1reNzLStr8uG_WlUV8a2Adr6Y3/exec";
 
 // Hash actuel (sera récupéré depuis Google Sheets ou utilisera le défaut)
 let ADMIN_PASSWORD_HASH = DEFAULT_PASSWORD_HASH;
@@ -16,19 +17,21 @@ const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
 // Fonction de hashage SHA-256
 async function hashPassword(password) {
   const msgBuffer = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return hashHex;
 }
 
 // Fonction pour récupérer le hash depuis Google Sheets
 async function fetchPasswordHash() {
   // Vérifier d'abord le cache
-  const cachedHash = sessionStorage.getItem('adminPasswordHash');
+  const cachedHash = sessionStorage.getItem("adminPasswordHash");
   if (cachedHash) {
     ADMIN_PASSWORD_HASH = cachedHash;
-    console.log('Hash chargé depuis le cache');
+    console.log("Hash chargé depuis le cache");
     return;
   }
 
@@ -39,13 +42,16 @@ async function fetchPasswordHash() {
     if (data.success && data.hash) {
       ADMIN_PASSWORD_HASH = data.hash;
       // Mettre en cache pour les prochaines pages
-      sessionStorage.setItem('adminPasswordHash', data.hash);
-      console.log('Hash personnalisé chargé depuis Google Sheets');
+      sessionStorage.setItem("adminPasswordHash", data.hash);
+      console.log("Hash personnalisé chargé depuis Google Sheets");
     } else {
-      console.log('Utilisation du hash par défaut');
+      console.log("Utilisation du hash par défaut");
     }
   } catch (error) {
-    console.warn('Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:', error);
+    console.warn(
+      "Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:",
+      error,
+    );
   }
 }
 
@@ -87,7 +93,10 @@ function getLoginAttempts() {
 }
 
 function saveLoginAttempts(count, blockedUntil = null) {
-  localStorage.setItem("adminLoginAttempts", JSON.stringify({ count, blockedUntil }));
+  localStorage.setItem(
+    "adminLoginAttempts",
+    JSON.stringify({ count, blockedUntil }),
+  );
 }
 
 function isBlocked() {
@@ -124,7 +133,7 @@ function formatTimeRemaining(blockedUntil) {
   const remaining = Math.ceil((blockedUntil - Date.now()) / 1000);
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function updateLockoutMessage(blockedUntil) {
@@ -230,7 +239,9 @@ loginForm.addEventListener("submit", async (e) => {
       // Pas encore bloqué
       const attempts = getLoginAttempts();
       const remaining = MAX_ATTEMPTS - attempts.count;
-      showError(`Mot de passe incorrect. ${remaining} tentative(s) restante(s).`);
+      showError(
+        `Mot de passe incorrect. ${remaining} tentative(s) restante(s).`,
+      );
     }
   }
 });
@@ -290,7 +301,7 @@ async function fetchOrdersFromSheet() {
       const testDate = new Date(orders[0].date);
       console.log("Date parsée:", testDate);
       console.log("Date parsée ISO:", testDate.toISOString());
-      console.log("Date parsée locale:", testDate.toLocaleString('fr-FR'));
+      console.log("Date parsée locale:", testDate.toLocaleString("fr-FR"));
       if (orders.length > 1) {
         console.log("Deuxième commande - date brute:", orders[1].date);
       }
@@ -355,7 +366,8 @@ function formatOrderDate(dateStr) {
   try {
     // Format français : JJ/MM/AAAA HH:MM:SS
     // Regex pour capturer les parties de la date
-    const frenchDateRegex = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
+    const frenchDateRegex =
+      /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
     const match = dateStr.match(frenchDateRegex);
 
     if (match) {
@@ -432,9 +444,10 @@ function renderOrders(orders) {
     const statusText = o.status === "paid" ? "Payée" : "En attente";
 
     // Extraire les noms des produits
-    const productNames = o.items && o.items.length > 0
-      ? o.items.map(item => `${item.name} (×${item.qty})`).join(", ")
-      : "-";
+    const productNames =
+      o.items && o.items.length > 0
+        ? o.items.map((item) => `${item.name} (×${item.qty})`).join(", ")
+        : "-";
 
     row.innerHTML = `
       <td><input type="checkbox" class="order-checkbox" data-id="${o.order_id}" /></td>
@@ -478,7 +491,7 @@ function applyFilters() {
       (o) =>
         normalize(o.order_id).includes(q) ||
         normalize(o.email).includes(q) ||
-        normalize(o.full_name).includes(q)
+        normalize(o.full_name).includes(q),
     );
   }
 
@@ -496,7 +509,8 @@ function applyFilters() {
       let orderDate;
       try {
         // Format français : JJ/MM/AAAA HH:MM:SS
-        const frenchDateRegex = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
+        const frenchDateRegex =
+          /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
         const match = o.date.match(frenchDateRegex);
 
         if (match) {
@@ -512,7 +526,7 @@ function applyFilters() {
 
       // Vérifier que la date est valide
       if (isNaN(orderDate.getTime())) {
-        console.warn('Date invalide:', o.date);
+        console.warn("Date invalide:", o.date);
         return false;
       }
 
@@ -625,19 +639,34 @@ function updateCascadeFilters(filteredOrders) {
   populateStatusFilter(filteredOrders);
 
   // Restaurer les valeurs sélectionnées si elles existent toujours
-  if (currentClient && Array.from(clientFilterEl.options).some(o => o.value === currentClient)) {
+  if (
+    currentClient &&
+    Array.from(clientFilterEl.options).some((o) => o.value === currentClient)
+  ) {
     clientFilterEl.value = currentClient;
   }
-  if (currentEmail && Array.from(emailFilterEl.options).some(o => o.value === currentEmail)) {
+  if (
+    currentEmail &&
+    Array.from(emailFilterEl.options).some((o) => o.value === currentEmail)
+  ) {
     emailFilterEl.value = currentEmail;
   }
-  if (currentCity && Array.from(cityFilterEl.options).some(o => o.value === currentCity)) {
+  if (
+    currentCity &&
+    Array.from(cityFilterEl.options).some((o) => o.value === currentCity)
+  ) {
     cityFilterEl.value = currentCity;
   }
-  if (currentProduct && Array.from(productFilterEl.options).some(o => o.value === currentProduct)) {
+  if (
+    currentProduct &&
+    Array.from(productFilterEl.options).some((o) => o.value === currentProduct)
+  ) {
     productFilterEl.value = currentProduct;
   }
-  if (currentStatus && Array.from(statusFilterEl.options).some(o => o.value === currentStatus)) {
+  if (
+    currentStatus &&
+    Array.from(statusFilterEl.options).some((o) => o.value === currentStatus)
+  ) {
     statusFilterEl.value = currentStatus;
   }
 }
@@ -813,7 +842,7 @@ function showOrderDetails(orderId) {
       <td>${Number(item.price_eur || 0).toFixed(2)} €</td>
       <td><strong>${Number(item.line_total_eur || 0).toFixed(2)} €</strong></td>
     </tr>
-  `
+  `,
     )
     .join("");
 
@@ -886,7 +915,12 @@ function escapeCSVCell(cell) {
   if (cell == null) return "";
   const str = String(cell);
   // Si la cellule contient des guillemets, virgules, retours à la ligne ou point-virgules, on l'encadre de guillemets
-  if (str.includes('"') || str.includes(";") || str.includes("\n") || str.includes("\r")) {
+  if (
+    str.includes('"') ||
+    str.includes(";") ||
+    str.includes("\n") ||
+    str.includes("\r")
+  ) {
     // Doubler les guillemets à l'intérieur
     return `"${str.replace(/"/g, '""')}"`;
   }
@@ -945,7 +979,7 @@ exportBtn.addEventListener("click", () => {
   link.setAttribute("href", url);
   link.setAttribute(
     "download",
-    `commandes_${new Date().toISOString().split("T")[0]}.csv`
+    `commandes_${new Date().toISOString().split("T")[0]}.csv`,
   );
   link.style.visibility = "hidden";
   document.body.appendChild(link);
@@ -977,7 +1011,7 @@ deleteSelectedBtn?.addEventListener("click", async () => {
 
   if (
     !confirm(
-      `Voulez-vous vraiment supprimer ${orderIds.length} commande(s) ?\n\n${orderIds.join(", ")}`
+      `Voulez-vous vraiment supprimer ${orderIds.length} commande(s) ?\n\n${orderIds.join(", ")}`,
     )
   ) {
     console.log("Suppression annulée par l'utilisateur");
@@ -1014,9 +1048,7 @@ deleteSelectedBtn?.addEventListener("click", async () => {
   if (errorCount === 0) {
     alert(`${successCount} commande(s) supprimée(s) avec succès !`);
   } else {
-    alert(
-      `${successCount} commande(s) supprimée(s), ${errorCount} erreur(s).`
-    );
+    alert(`${successCount} commande(s) supprimée(s), ${errorCount} erreur(s).`);
   }
 
   location.reload();
@@ -1073,7 +1105,7 @@ async function init() {
 }
 
 // Initialiser: vérifier l'auth d'abord, puis récupérer le hash en arrière-plan
-(async function() {
+(async function () {
   const isAuthenticated = sessionStorage.getItem("adminAuth") === "true";
 
   if (isAuthenticated) {

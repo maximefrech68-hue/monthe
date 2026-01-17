@@ -1,10 +1,11 @@
 // Configuration
 // Hash SHA-256 du mot de passe par défaut (fallback)
-const DEFAULT_PASSWORD_HASH = "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
+const DEFAULT_PASSWORD_HASH =
+  "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
 const PRODUCTS_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=Products";
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+  "https://script.google.com/macros/s/AKfycbwrcI_QuLKJtwYFDVwG1V7Z5xjWDRnT9ajYN5J5oY1reNzLStr8uG_WlUV8a2Adr6Y3/exec";
 
 // Hash actuel (sera récupéré depuis Google Sheets ou utilisera le défaut)
 let ADMIN_PASSWORD_HASH = DEFAULT_PASSWORD_HASH;
@@ -12,19 +13,21 @@ let ADMIN_PASSWORD_HASH = DEFAULT_PASSWORD_HASH;
 // Fonction de hashage SHA-256
 async function hashPassword(password) {
   const msgBuffer = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return hashHex;
 }
 
 // Fonction pour récupérer le hash depuis Google Sheets
 async function fetchPasswordHash() {
   // Vérifier d'abord le cache
-  const cachedHash = sessionStorage.getItem('adminPasswordHash');
+  const cachedHash = sessionStorage.getItem("adminPasswordHash");
   if (cachedHash) {
     ADMIN_PASSWORD_HASH = cachedHash;
-    console.log('Hash chargé depuis le cache');
+    console.log("Hash chargé depuis le cache");
     return;
   }
 
@@ -35,13 +38,16 @@ async function fetchPasswordHash() {
     if (data.success && data.hash) {
       ADMIN_PASSWORD_HASH = data.hash;
       // Mettre en cache pour les prochaines pages
-      sessionStorage.setItem('adminPasswordHash', data.hash);
-      console.log('Hash personnalisé chargé depuis Google Sheets');
+      sessionStorage.setItem("adminPasswordHash", data.hash);
+      console.log("Hash personnalisé chargé depuis Google Sheets");
     } else {
-      console.log('Utilisation du hash par défaut');
+      console.log("Utilisation du hash par défaut");
     }
   } catch (error) {
-    console.warn('Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:', error);
+    console.warn(
+      "Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:",
+      error,
+    );
   }
 }
 
@@ -250,7 +256,7 @@ function applyFilters() {
       (p) =>
         normalize(p.id).includes(q) ||
         normalize(p.name).includes(q) ||
-        normalize(p.category).includes(q)
+        normalize(p.category).includes(q),
     );
   }
 
@@ -360,7 +366,7 @@ async function init() {
 }
 
 // Initialiser: vérifier l'auth d'abord, puis récupérer le hash en arrière-plan
-(async function() {
+(async function () {
   const isAuthenticated = sessionStorage.getItem("adminAuth") === "true";
 
   if (isAuthenticated) {

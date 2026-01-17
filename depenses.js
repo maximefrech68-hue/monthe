@@ -2,7 +2,7 @@
 const ACHATS_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=ACHATS%20(Registre%20des%20d%C3%A9penses)";
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+  "https://script.google.com/macros/s/AKfycbwrcI_QuLKJtwYFDVwG1V7Z5xjWDRnT9ajYN5J5oY1reNzLStr8uG_WlUV8a2Adr6Y3/exec";
 
 let allDepenses = [];
 let currentFile = null;
@@ -113,18 +113,27 @@ async function loadDepenses() {
 
 // Mettre à jour les filtres en cascade
 function updateFilters() {
-  const dates = [...new Set(allDepenses.map((d) => d.date).filter((d) => d))].sort().reverse();
-  const fournisseurs = [...new Set(allDepenses.map((d) => d.fournisseur).filter((f) => f))].sort();
-  const categories = [...new Set(allDepenses.map((d) => d.categorie).filter((c) => c))].sort();
+  const dates = [...new Set(allDepenses.map((d) => d.date).filter((d) => d))]
+    .sort()
+    .reverse();
+  const fournisseurs = [
+    ...new Set(allDepenses.map((d) => d.fournisseur).filter((f) => f)),
+  ].sort();
+  const categories = [
+    ...new Set(allDepenses.map((d) => d.categorie).filter((c) => c)),
+  ].sort();
 
   // Remplir les selects
-  filterDate.innerHTML = '<option value="">Toutes les dates</option>' +
+  filterDate.innerHTML =
+    '<option value="">Toutes les dates</option>' +
     dates.map((d) => `<option value="${d}">${d}</option>`).join("");
 
-  filterFournisseur.innerHTML = '<option value="">Tous les fournisseurs</option>' +
+  filterFournisseur.innerHTML =
+    '<option value="">Tous les fournisseurs</option>' +
     fournisseurs.map((f) => `<option value="${f}">${f}</option>`).join("");
 
-  filterCategorie.innerHTML = '<option value="">Toutes les catégories</option>' +
+  filterCategorie.innerHTML =
+    '<option value="">Toutes les catégories</option>' +
     categories.map((c) => `<option value="${c}">${c}</option>`).join("");
 }
 
@@ -163,12 +172,11 @@ function renderTable() {
   }
 
   depensesTableBody.innerHTML = filtered
-    .map(
-      (d, idx) => {
-        const safeDate = (d.date || "").replace(/'/g, "\\'");
-        const safeFournisseur = (d.fournisseur || "").replace(/'/g, "\\'");
+    .map((d, idx) => {
+      const safeDate = (d.date || "").replace(/'/g, "\\'");
+      const safeFournisseur = (d.fournisseur || "").replace(/'/g, "\\'");
 
-        return `
+      return `
       <tr>
         <td><input type="checkbox" data-index="${idx}" /></td>
         <td>${d.date || "-"}</td>
@@ -188,8 +196,7 @@ function renderTable() {
         </td>
       </tr>
     `;
-      }
-    )
+    })
     .join("");
 }
 
@@ -209,7 +216,17 @@ resetFilters.addEventListener("click", () => {
 exportCSV.addEventListener("click", () => {
   const filtered = getFilteredDepenses();
 
-  const headers = ["Date", "Fournisseur", "Catégorie", "Description", "HT", "TVA", "TTC", "Paiement", "Justificatif"];
+  const headers = [
+    "Date",
+    "Fournisseur",
+    "Catégorie",
+    "Description",
+    "HT",
+    "TVA",
+    "TTC",
+    "Paiement",
+    "Justificatif",
+  ];
   const rows = filtered.map((d) => [
     d.date,
     d.fournisseur,
@@ -219,7 +236,7 @@ exportCSV.addEventListener("click", () => {
     d.tva.toFixed(2),
     d.montant_ttc.toFixed(2),
     d.paiement,
-    d.justificatif
+    d.justificatif,
   ]);
 
   const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
@@ -227,7 +244,7 @@ exportCSV.addEventListener("click", () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `depenses_${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = `depenses_${new Date().toISOString().split("T")[0]}.csv`;
   a.click();
 });
 
@@ -236,7 +253,9 @@ addDepenseBtn.addEventListener("click", () => {
   document.getElementById("modalTitle").textContent = "Ajouter une dépense";
   depenseForm.reset();
   document.getElementById("depenseId").value = "";
-  document.getElementById("depenseDate").value = new Date().toISOString().split('T')[0];
+  document.getElementById("depenseDate").value = new Date()
+    .toISOString()
+    .split("T")[0];
   currentFile = null;
   filePreview.style.display = "none";
   depenseModal.classList.remove("hidden");
@@ -259,17 +278,23 @@ window.addEventListener("click", (e) => {
 });
 
 // Calcul automatique TVA et TTC
-document.getElementById("depenseHT").addEventListener("input", calculateAmountsDepense);
-document.getElementById("depenseTauxTVA").addEventListener("input", calculateAmountsDepense);
+document
+  .getElementById("depenseHT")
+  .addEventListener("input", calculateAmountsDepense);
+document
+  .getElementById("depenseTauxTVA")
+  .addEventListener("input", calculateAmountsDepense);
 
 function calculateAmountsDepense() {
   const ht = parseFloat(document.getElementById("depenseHT").value) || 0;
-  const tauxTVA = parseFloat(document.getElementById("depenseTauxTVA").value) || 0;
+  const tauxTVA =
+    parseFloat(document.getElementById("depenseTauxTVA").value) || 0;
 
   const montantTVA = ht * (tauxTVA / 100);
   const ttc = ht + montantTVA;
 
-  document.getElementById("calculatedTVA").textContent = montantTVA.toFixed(2) + " €";
+  document.getElementById("calculatedTVA").textContent =
+    montantTVA.toFixed(2) + " €";
   document.getElementById("calculatedTTC").textContent = ttc.toFixed(2) + " €";
 }
 
@@ -304,7 +329,12 @@ fileInput.addEventListener("change", (e) => {
 
 function handleFileSelect(file) {
   const maxSize = 5 * 1024 * 1024; // 5MB
-  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+  const allowedTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/jpg",
+  ];
 
   if (!allowedTypes.includes(file.type)) {
     alert("Type de fichier non autorisé. Utilisez PDF, JPG ou PNG.");
@@ -355,7 +385,14 @@ depenseForm.addEventListener("submit", async (e) => {
   const ttc = ht + montantTVA;
   const paiement = document.getElementById("depensePaiement").value;
 
-  if (!date || !fournisseur || !categorie || isNaN(ht) || isNaN(tauxTVA) || !paiement) {
+  if (
+    !date ||
+    !fournisseur ||
+    !categorie ||
+    isNaN(ht) ||
+    isNaN(tauxTVA) ||
+    !paiement
+  ) {
     alert("Veuillez remplir tous les champs obligatoires.");
     return;
   }
@@ -368,9 +405,14 @@ depenseForm.addEventListener("submit", async (e) => {
       fileData = {
         fileName: currentFile.name,
         mimeType: currentFile.type,
-        base64Data: base64Data
+        base64Data: base64Data,
       };
-      console.log("Fichier préparé:", fileData.fileName, "Taille base64:", base64Data.length);
+      console.log(
+        "Fichier préparé:",
+        fileData.fileName,
+        "Taille base64:",
+        base64Data.length,
+      );
     } catch (error) {
       console.error("Erreur préparation fichier:", error);
       alert("Erreur lors de la préparation du fichier. Veuillez réessayer.");
@@ -400,14 +442,14 @@ depenseForm.addEventListener("submit", async (e) => {
         HT: ht,
         TVA: montantTVA,
         TTC: ttc,
-        Paiement: paiement
+        Paiement: paiement,
       };
 
       payload = {
         action: fileData ? "updateDepenseWithFile" : "updateDepense",
         date: originalDate,
         fournisseur: originalFournisseur,
-        updates: updates
+        updates: updates,
       };
 
       if (fileData) {
@@ -427,12 +469,12 @@ depenseForm.addEventListener("submit", async (e) => {
         TVA: montantTVA,
         TTC: ttc,
         Paiement: paiement,
-        Justificatif: ""
+        Justificatif: "",
       };
 
       payload = {
         action: fileData ? "addDepenseWithFile" : "addDepense",
-        data: depenseData
+        data: depenseData,
       };
 
       if (fileData) {
@@ -491,12 +533,14 @@ function convertDateToInputFormat(dateStr) {
 }
 
 // Modifier une dépense
-window.editDepense = function(date, fournisseur) {
+window.editDepense = function (date, fournisseur) {
   console.log("===== editDepense appelée =====");
   console.log("Date:", date);
   console.log("Fournisseur:", fournisseur);
 
-  const depense = allDepenses.find((d) => d.date === date && d.fournisseur === fournisseur);
+  const depense = allDepenses.find(
+    (d) => d.date === date && d.fournisseur === fournisseur,
+  );
 
   if (!depense) {
     console.error("Dépense non trouvée dans allDepenses!");
@@ -523,8 +567,10 @@ window.editDepense = function(date, fournisseur) {
   document.getElementById("depenseHT").value = depense.montant_ht.toFixed(2);
 
   // Calculer le taux de TVA à partir du montant TVA et HT
-  const tauxTVA = depense.montant_ht > 0 ? (depense.tva / depense.montant_ht) * 100 : 20;
-  document.getElementById("depenseTauxTVA").value = Math.round(tauxTVA * 100) / 100;
+  const tauxTVA =
+    depense.montant_ht > 0 ? (depense.tva / depense.montant_ht) * 100 : 20;
+  document.getElementById("depenseTauxTVA").value =
+    Math.round(tauxTVA * 100) / 100;
 
   document.getElementById("depensePaiement").value = depense.paiement;
 
@@ -538,7 +584,7 @@ window.editDepense = function(date, fournisseur) {
 };
 
 // Supprimer une dépense
-window.deleteDepense = async function(date, fournisseur) {
+window.deleteDepense = async function (date, fournisseur) {
   if (!confirm(`Supprimer la dépense du ${date} (${fournisseur}) ?`)) {
     return;
   }

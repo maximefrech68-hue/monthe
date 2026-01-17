@@ -1,6 +1,6 @@
 // Configuration
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+  "https://script.google.com/macros/s/AKfycbwrcI_QuLKJtwYFDVwG1V7Z5xjWDRnT9ajYN5J5oY1reNzLStr8uG_WlUV8a2Adr6Y3/exec";
 
 // Éléments DOM
 const productForm = document.getElementById("productForm");
@@ -133,7 +133,7 @@ uploadBtn.addEventListener("click", async () => {
         if (!response.ok) {
           console.error("Erreur HTTP:", response.status, response.statusText);
           throw new Error(
-            `Erreur HTTP ${response.status}: ${responseText.substring(0, 200)}`
+            `Erreur HTTP ${response.status}: ${responseText.substring(0, 200)}`,
           );
         }
 
@@ -149,8 +149,8 @@ uploadBtn.addEventListener("click", async () => {
           throw new Error(
             `Impossible de parser la réponse JSON: ${responseText.substring(
               0,
-              100
-            )}`
+              100,
+            )}`,
           );
         }
 
@@ -171,14 +171,23 @@ uploadBtn.addEventListener("click", async () => {
 
           // Configurer les événements AVANT de définir le src
           imagePreview.onload = () => {
-            console.log("Image chargée avec succès, dimensions:", imagePreview.naturalWidth, "x", imagePreview.naturalHeight);
+            console.log(
+              "Image chargée avec succès, dimensions:",
+              imagePreview.naturalWidth,
+              "x",
+              imagePreview.naturalHeight,
+            );
             imagePreview.style.display = "block";
           };
 
           imagePreview.onerror = () => {
-            console.error("Erreur de chargement de l'aperçu - Restrictions CORS de Google Drive");
+            console.error(
+              "Erreur de chargement de l'aperçu - Restrictions CORS de Google Drive",
+            );
             // Ne PAS changer l'URL - garder celle avec export=view qui fonctionne sur le site
-            showSuccess("Image téléchargée ! L'aperçu ne s'affiche pas à cause des restrictions Google Drive, mais l'image sera visible sur le site après ajout du produit.");
+            showSuccess(
+              "Image téléchargée ! L'aperçu ne s'affiche pas à cause des restrictions Google Drive, mais l'image sera visible sur le site après ajout du produit.",
+            );
             // Créer un aperçu avec un placeholder
             imagePreview.style.display = "none";
           };
@@ -188,7 +197,7 @@ uploadBtn.addEventListener("click", async () => {
         } else {
           console.error("Échec selon la réponse:", data);
           throw new Error(
-            data.message || data.error || "Erreur lors du téléchargement"
+            data.message || data.error || "Erreur lors du téléchargement",
           );
         }
       } catch (error) {
@@ -223,7 +232,7 @@ async function loadProduct(id) {
   try {
     const res = await fetch(
       "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=Products",
-      { cache: "no-store" }
+      { cache: "no-store" },
     );
     if (!res.ok) throw new Error("Erreur chargement Google Sheet");
 

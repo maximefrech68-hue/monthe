@@ -2,7 +2,7 @@ let allProducts = [];
 let cart = loadCart();
 
 const GOOGLE_APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+  "https://script.google.com/macros/s/AKfycbwrcI_QuLKJtwYFDVwG1V7Z5xjWDRnT9ajYN5J5oY1reNzLStr8uG_WlUV8a2Adr6Y3/exec";
 
 // IMPORTANT : ton domaine Netlify (prod)
 const SITE_URL = "https://zippy-hamster-4154f1.netlify.app";
@@ -79,7 +79,7 @@ function renderSummary() {
         <span>${qty} × ${Number(p.price_eur || 0).toFixed(2)} €</span>
       </div>
       <div><strong>${(Number(p.price_eur || 0) * qty).toFixed(
-        2
+        2,
       )} €</strong></div>
     `;
     summaryEl.appendChild(row);
@@ -178,7 +178,7 @@ openCartBtn?.addEventListener("click", () => {
   renderCartModal();
 });
 closeCartBtn?.addEventListener("click", () =>
-  cartModal?.classList.add("hidden")
+  cartModal?.classList.add("hidden"),
 );
 cartModal?.addEventListener("click", (e) => {
   if (e.target === cartModal) cartModal.classList.add("hidden");
@@ -379,9 +379,9 @@ async function handleStripeReturn() {
     `;
 
     // Ajouter l'animation spin si elle n'existe pas
-    if (!document.querySelector('#spin-keyframes')) {
-      const style = document.createElement('style');
-      style.id = 'spin-keyframes';
+    if (!document.querySelector("#spin-keyframes")) {
+      const style = document.createElement("style");
+      style.id = "spin-keyframes";
       style.textContent = `
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -451,14 +451,14 @@ async function handleStripeReturn() {
       // En cas d'erreur, supprimer le spinner et réafficher le formulaire
       loadingOverlay.remove();
       // Supprimer le style inline qui cachait le contenu
-      const hideStyle = document.querySelector('style[data-hide-checkout]');
+      const hideStyle = document.querySelector("style[data-hide-checkout]");
       if (!hideStyle) {
         // Si le style a été injecté via document.write, on doit forcer l'affichage
-        document.querySelector("header").style.display = '';
-        document.querySelector(".checkout-page").style.display = '';
+        document.querySelector("header").style.display = "";
+        document.querySelector(".checkout-page").style.display = "";
       }
       alert(
-        "Paiement OK, mais erreur d'enregistrement commande : " + err.message
+        "Paiement OK, mais erreur d'enregistrement commande : " + err.message,
       );
       console.error(err);
     }

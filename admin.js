@@ -1,8 +1,9 @@
 // Configuration
 // Hash SHA-256 du mot de passe par défaut (fallback)
-const DEFAULT_PASSWORD_HASH = "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
+const DEFAULT_PASSWORD_HASH =
+  "04b60e8e42ac31ab5e5fa8af7e0841a5bd4e40ae7343017dbeac4ad3f845fc5c";
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwWO8wmikXDUIuCLLZbi-Y4m-LdWoyJIF4ogNqFouDj8-XBVib3iK7CR05zVpXvMEHR/exec";
+  "https://script.google.com/macros/s/AKfycbwrcI_QuLKJtwYFDVwG1V7Z5xjWDRnT9ajYN5J5oY1reNzLStr8uG_WlUV8a2Adr6Y3/exec";
 
 // Hash actuel (sera récupéré depuis Google Sheets ou utilisera le défaut)
 let ADMIN_PASSWORD_HASH = DEFAULT_PASSWORD_HASH;
@@ -14,19 +15,21 @@ const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
 // Fonction de hashage SHA-256
 async function hashPassword(password) {
   const msgBuffer = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return hashHex;
 }
 
 // Fonction pour récupérer le hash depuis Google Sheets
 async function fetchPasswordHash() {
   // Vérifier d'abord le cache
-  const cachedHash = sessionStorage.getItem('adminPasswordHash');
+  const cachedHash = sessionStorage.getItem("adminPasswordHash");
   if (cachedHash) {
     ADMIN_PASSWORD_HASH = cachedHash;
-    console.log('Hash chargé depuis le cache');
+    console.log("Hash chargé depuis le cache");
     return;
   }
 
@@ -37,13 +40,16 @@ async function fetchPasswordHash() {
     if (data.success && data.hash) {
       ADMIN_PASSWORD_HASH = data.hash;
       // Mettre en cache pour les prochaines pages
-      sessionStorage.setItem('adminPasswordHash', data.hash);
-      console.log('Hash personnalisé chargé depuis Google Sheets');
+      sessionStorage.setItem("adminPasswordHash", data.hash);
+      console.log("Hash personnalisé chargé depuis Google Sheets");
     } else {
-      console.log('Utilisation du hash par défaut');
+      console.log("Utilisation du hash par défaut");
     }
   } catch (error) {
-    console.warn('Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:', error);
+    console.warn(
+      "Impossible de récupérer le hash personnalisé, utilisation du hash par défaut:",
+      error,
+    );
   }
 }
 
@@ -72,7 +78,10 @@ function getLoginAttempts() {
 }
 
 function saveLoginAttempts(count, blockedUntil = null) {
-  localStorage.setItem("adminLoginAttempts", JSON.stringify({ count, blockedUntil }));
+  localStorage.setItem(
+    "adminLoginAttempts",
+    JSON.stringify({ count, blockedUntil }),
+  );
 }
 
 function isBlocked() {
@@ -109,7 +118,7 @@ function formatTimeRemaining(blockedUntil) {
   const remaining = Math.ceil((blockedUntil - Date.now()) / 1000);
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function updateLockoutMessage(blockedUntil) {
@@ -215,7 +224,9 @@ loginForm.addEventListener("submit", async (e) => {
       // Pas encore bloqué
       const attempts = getLoginAttempts();
       const remaining = MAX_ATTEMPTS - attempts.count;
-      showError(`Mot de passe incorrect. ${remaining} tentative(s) restante(s).`);
+      showError(
+        `Mot de passe incorrect. ${remaining} tentative(s) restante(s).`,
+      );
     }
   }
 });
@@ -248,13 +259,16 @@ function renderProducts(products) {
     card.className = "product";
 
     // Utiliser une image par défaut si l'URL est vide
-    const imageUrl = p.image_url && p.image_url.trim() !== ""
-      ? p.image_url
-      : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'%3E%3Crect width='600' height='400' fill='%23f7f4ef'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='%23a0826d'%3EMonThé - Pas d'image%3C/text%3E%3C/svg%3E";
+    const imageUrl =
+      p.image_url && p.image_url.trim() !== ""
+        ? p.image_url
+        : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'%3E%3Crect width='600' height='400' fill='%23f7f4ef'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='%23a0826d'%3EMonThé - Pas d'image%3C/text%3E%3C/svg%3E";
 
     // Déterminer le statut actif/inactif
     const isActive = p.active === true || p.active === null;
-    const statusBadgeClass = isActive ? "status-badge status-active" : "status-badge status-inactive";
+    const statusBadgeClass = isActive
+      ? "status-badge status-active"
+      : "status-badge status-inactive";
     const statusBadgeText = isActive ? "Actif" : "Désactivé";
 
     card.innerHTML = `
@@ -335,7 +349,7 @@ function applyUIFilters() {
         normalize(p.name).includes(q) ||
         normalize(p.short_desc).includes(q) ||
         normalize(p.description).includes(q) ||
-        normalize(p.tasting_notes).includes(q)
+        normalize(p.tasting_notes).includes(q),
     );
   }
 
@@ -359,7 +373,7 @@ async function fetchAllProducts() {
   try {
     const res = await fetch(
       "https://docs.google.com/spreadsheets/d/1KXDB5K0NSrdsyyOTxqRef4yBR2n-GDQnEgvT9MNxNY0/gviz/tq?tqx=out:csv&sheet=Products",
-      { cache: "no-store" }
+      { cache: "no-store" },
     );
     if (!res.ok) throw new Error("Erreur chargement Google Sheet");
 
@@ -453,7 +467,7 @@ async function init() {
 }
 
 // Initialiser: vérifier l'auth d'abord, puis récupérer le hash en arrière-plan
-(async function() {
+(async function () {
   const isAuthenticated = sessionStorage.getItem("adminAuth") === "true";
 
   if (isAuthenticated) {
