@@ -331,9 +331,9 @@ async function uploadFile(file) {
       reader.onload = async () => {
         const base64Data = reader.result.split(",")[1];
 
-        const response = await fetch(APPS_SCRIPT_URL, {
+        // Note: On retire le header Content-Type pour éviter CORS preflight
+        const response = await fetch(APPS_SCRIPT_URL + "?action=uploadJustificatif", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "uploadJustificatif",
             fileName: file.name,
@@ -365,6 +365,9 @@ async function uploadFile(file) {
 depenseForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  const depenseId = document.getElementById("depenseId").value;
+  const isEditMode = depenseId && depenseId.trim() !== "";
+
   const date = document.getElementById("depenseDate").value;
   const fournisseur = document.getElementById("depenseFournisseur").value;
   const categorie = document.getElementById("depenseCategorie").value;
@@ -384,42 +387,83 @@ depenseForm.addEventListener("submit", async (e) => {
   let justificatif = "";
   if (currentFile) {
     justificatif = await uploadFile(currentFile);
+    if (!justificatif) {
+      alert("Erreur lors de l'upload du fichier. Veuillez réessayer.");
+      return;
+    }
   }
 
-  const depenseData = {
-    Date: date,
-    Fournisseur: fournisseur,
-    Catégorie: categorie,
-    Description: description,
-    HT: ht,
-    TVA: montantTVA,
-    TTC: ttc,
-    Paiement: paiement,
-    Justificatif: justificatif
-  };
-
   try {
+    let payload;
+    let successMessage;
+
+    if (isEditMode) {
+      // Mode modification
+      const [originalDate, originalFournisseur] = depenseId.split("|");
+
+      const updates = {
+        Date: date,
+        Fournisseur: fournisseur,
+        Catégorie: categorie,
+        Description: description,
+        HT: ht,
+        TVA: montantTVA,
+        TTC: ttc,
+        Paiement: paiement
+      };
+
+      // Ajouter le justificatif seulement si un nouveau fichier a été uploadé
+      if (justificatif) {
+        updates.Justificatif = justificatif;
+      }
+
+      payload = {
+        action: "updateDepense",
+        date: originalDate,
+        fournisseur: originalFournisseur,
+        updates: updates
+      };
+
+      successMessage = "Dépense modifiée avec succès !";
+    } else {
+      // Mode ajout
+      const depenseData = {
+        Date: date,
+        Fournisseur: fournisseur,
+        Catégorie: categorie,
+        Description: description,
+        HT: ht,
+        TVA: montantTVA,
+        TTC: ttc,
+        Paiement: paiement,
+        Justificatif: justificatif
+      };
+
+      payload = {
+        action: "addDepense",
+        data: depenseData
+      };
+
+      successMessage = "Dépense ajoutée avec succès !";
+    }
+
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "addDepense",
-        data: depenseData,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const result = await response.json();
 
     if (result.success) {
-      alert("Dépense ajoutée avec succès !");
+      alert(successMessage);
       depenseModal.classList.add("hidden");
       setTimeout(() => location.reload(), 500);
     } else {
-      throw new Error(result.message || "Erreur lors de l'ajout");
+      throw new Error(result.message || "Erreur lors de l'opération");
     }
   } catch (error) {
     console.error("Erreur:", error);
-    alert("Erreur lors de l'ajout de la dépense: " + error.message);
+    alert("Erreur lors de l'opération: " + error.message);
   }
 });
 

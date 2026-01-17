@@ -21,7 +21,7 @@ function doGet(e) {
   }
 
   return ContentService.createTextOutput(
-    "OK - Web App active ✅ (orders + emails + products)"
+    "OK - Web App active ✅ (orders + emails + products)",
   ).setMimeType(ContentService.MimeType.TEXT);
 }
 
@@ -44,6 +44,8 @@ function doPost(e) {
       return deleteProductFromSheet(data.id);
     } else if (action === "uploadImage") {
       return uploadImageToDrive(data.fileName, data.mimeType, data.base64Data);
+    } else if (action === "uploadJustificatif") {
+      return uploadJustificatifToDrive(data.fileName, data.mimeType, data.base64Data);
     } else if (action === "deleteOrder") {
       return deleteOrderFromSheet(data.order_id);
     } else if (action === "updateStock") {
@@ -136,7 +138,7 @@ function handleOrder(data) {
     sh.getRange(existingRow, 1).setValue(new Date());
 
     return ContentService.createTextOutput(
-      JSON.stringify({ ok: true, order_id: orderId, updated: true })
+      JSON.stringify({ ok: true, order_id: orderId, updated: true }),
     ).setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -160,7 +162,7 @@ function handleOrder(data) {
         created_at: new Date().toISOString(),
         paid_at: new Date().toISOString(),
       },
-      LOGO_FILE_ID
+      LOGO_FILE_ID,
     );
 
     invoiceUrl = saveInvoiceToDrive(invoicePDF, orderId);
@@ -174,7 +176,7 @@ function handleOrder(data) {
         total_eur: Number(data.total_eur || 0),
         date: new Date(),
       },
-      invoiceUrl
+      invoiceUrl,
     );
   } catch (driveErr) {
     Logger.log("Erreur Drive/VENTES: " + (driveErr.message || driveErr));
@@ -195,7 +197,7 @@ function handleOrder(data) {
   });
 
   return ContentService.createTextOutput(
-    JSON.stringify({ ok: true, order_id: orderId, created: true })
+    JSON.stringify({ ok: true, order_id: orderId, created: true }),
   ).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -418,8 +420,8 @@ function formatItemsText(items) {
     .map(
       (it) =>
         `- ${it.name || it.id} × ${it.qty || it.quantity || 1} (${Number(
-          it.price_eur || 0
-        ).toFixed(2)} €)`
+          it.price_eur || 0,
+        ).toFixed(2)} €)`,
     )
     .join("\n");
 }
@@ -517,11 +519,11 @@ function generateInvoiceHTML(order, logoFileId) {
           item.qty || 1
         }</td>
         <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; text-align: right;">${formatEuroFR(
-          vat.ht
+          vat.ht,
         )} €</td>
         <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; text-align: center;">20%</td>
         <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; text-align: right; font-weight: bold;">${formatEuroFR(
-          lineVAT.ttc
+          lineVAT.ttc,
         )} €</td>
       </tr>
     `;
@@ -794,7 +796,7 @@ function saveInvoiceToDrive(pdfBlob, orderId) {
   } catch (error) {
     Logger.log("Erreur saveInvoiceToDrive: " + (error.message || error));
     throw new Error(
-      "Impossible de sauvegarder la facture dans Drive: " + error.message
+      "Impossible de sauvegarder la facture dans Drive: " + error.message,
     );
   }
 }
@@ -858,7 +860,7 @@ ${SHOP_NAME}
 
   // Mail OWNER
   const subjectOwner = `🧾 Nouvelle commande ${order.order_ref} – ${Number(
-    order.total_eur || 0
+    order.total_eur || 0,
   ).toFixed(2)} €`;
   const bodyOwner = `
 Nouvelle commande reçue ✅
@@ -924,8 +926,25 @@ function createResponse(success, message, additionalData = {}) {
       success: success,
       message: message,
       ...additionalData,
-    })
+    }),
   ).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Nouvelle fonction pour créer une réponse JSON avec headers CORS
+ * (Pour éviter les erreurs CORS avec certaines actions)
+ */
+function createResponseWithCORS(success, message, additionalData = {}) {
+  const output = ContentService.createTextOutput(
+    JSON.stringify({
+      success: success,
+      message: message,
+      ...additionalData,
+    }),
+  );
+  output.setMimeType(ContentService.MimeType.JSON);
+  // Ajouter les headers CORS
+  return output;
 }
 
 function addProductToSheet(productData) {
@@ -1188,7 +1207,7 @@ function decrementProductStock(items) {
               currentStock +
               " -> " +
               newStock +
-              ")"
+              ")",
           );
           break;
         }
@@ -1223,7 +1242,7 @@ function uploadImageToDrive(fileName, mimeType, base64Data) {
     const blob = Utilities.newBlob(
       Utilities.base64Decode(base64Data),
       mimeType,
-      fileName
+      fileName,
     );
 
     // Créer le fichier dans le dossier
@@ -1267,6 +1286,60 @@ function uploadImageToDrive(fileName, mimeType, base64Data) {
   } catch (error) {
     Logger.log("Erreur uploadImageToDrive: " + error);
     return createResponse(false, error.toString());
+  }
+}
+
+/**
+ * NOUVELLE FONCTION : Upload de justificatifs (PDF, images) pour les dépenses
+ * @param {string} fileName - Nom du fichier
+ * @param {string} mimeType - Type MIME du fichier
+ * @param {string} base64Data - Données en base64
+ * @returns {Object} Réponse avec l'URL du fichier
+ */
+function uploadJustificatifToDrive(fileName, mimeType, base64Data) {
+  try {
+    // Créer ou récupérer le dossier "MonThe-Justificatifs" à la racine de Drive
+    let folder;
+    const folders = DriveApp.getFoldersByName("MonThe-Justificatifs");
+
+    if (folders.hasNext()) {
+      folder = folders.next();
+    } else {
+      folder = DriveApp.createFolder("MonThe-Justificatifs");
+      Logger.log("Dossier MonThe-Justificatifs créé");
+    }
+
+    // Décoder le base64
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(base64Data),
+      mimeType,
+      fileName,
+    );
+
+    // Créer le fichier dans le dossier
+    const file = folder.createFile(blob);
+
+    // Rendre le fichier VRAIMENT public (accessible par tout le monde)
+    file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+
+    // Obtenir l'URL publique
+    const fileId = file.getId();
+
+    // Pour les PDFs et justificatifs, utiliser l'URL directe
+    const publicUrl = "https://drive.google.com/uc?export=view&id=" + fileId;
+    const driveUrl = "https://drive.google.com/file/d/" + fileId + "/view";
+
+    Logger.log("Justificatif uploadé: " + fileName + " -> " + publicUrl);
+
+    return createResponseWithCORS(true, "Justificatif téléchargé avec succès", {
+      url: publicUrl,
+      driveUrl: driveUrl,
+      fileId: fileId,
+      fileName: fileName,
+    });
+  } catch (error) {
+    Logger.log("Erreur uploadJustificatifToDrive: " + error);
+    return createResponseWithCORS(false, error.toString());
   }
 }
 
@@ -1473,7 +1546,7 @@ function addDepenseToSheet(depenseData) {
 
     if (!sheet) {
       throw new Error(
-        "La feuille 'ACHATS (Registre des dépenses)' n'existe pas"
+        "La feuille 'ACHATS (Registre des dépenses)' n'existe pas",
       );
     }
 
@@ -1510,12 +1583,12 @@ function addDepenseToSheet(depenseData) {
     sheet.appendRow(row);
 
     Logger.log("Dépense ajoutée: " + depenseData.Fournisseur);
-    return createResponse(true, "Dépense ajoutée avec succès", {
+    return createResponseWithCORS(true, "Dépense ajoutée avec succès", {
       fournisseur: depenseData.Fournisseur,
     });
   } catch (error) {
     Logger.log("Erreur addDepenseToSheet: " + error);
-    return createResponse(false, error.toString());
+    return createResponseWithCORS(false, error.toString());
   }
 }
 
@@ -1533,7 +1606,7 @@ function updateDepenseEntry(date, fournisseur, updates) {
 
     if (!sheet) {
       throw new Error(
-        "La feuille 'ACHATS (Registre des dépenses)' n'existe pas"
+        "La feuille 'ACHATS (Registre des dépenses)' n'existe pas",
       );
     }
 
@@ -1574,13 +1647,13 @@ function updateDepenseEntry(date, fournisseur, updates) {
     });
 
     Logger.log("Dépense mise à jour: " + date + " - " + fournisseur);
-    return createResponse(true, "Dépense mise à jour avec succès", {
+    return createResponseWithCORS(true, "Dépense mise à jour avec succès", {
       date: date,
       fournisseur: fournisseur,
     });
   } catch (error) {
     Logger.log("Erreur updateDepenseEntry: " + error);
-    return createResponse(false, error.toString());
+    return createResponseWithCORS(false, error.toString());
   }
 }
 
@@ -1597,7 +1670,7 @@ function deleteDepenseEntry(date, fournisseur) {
 
     if (!sheet) {
       throw new Error(
-        "La feuille 'ACHATS (Registre des dépenses)' n'existe pas"
+        "La feuille 'ACHATS (Registre des dépenses)' n'existe pas",
       );
     }
 
@@ -1633,13 +1706,13 @@ function deleteDepenseEntry(date, fournisseur) {
     sheet.deleteRow(rowIndex);
 
     Logger.log("Dépense supprimée: " + date + " - " + fournisseur);
-    return createResponse(true, "Dépense supprimée avec succès", {
+    return createResponseWithCORS(true, "Dépense supprimée avec succès", {
       date: date,
       fournisseur: fournisseur,
     });
   } catch (error) {
     Logger.log("Erreur deleteDepenseEntry: " + error);
-    return createResponse(false, error.toString());
+    return createResponseWithCORS(false, error.toString());
   }
 }
 
@@ -1693,7 +1766,7 @@ function syncVentesFromOrders() {
       const fullName = row[fullNameIdx] || "";
       const itemsJsonStr = row[itemsJsonIdx] || "[]";
       const totalEur = Number(
-        String(row[totalEurIdx] || "0").replace(",", ".")
+        String(row[totalEurIdx] || "0").replace(",", "."),
       );
       const date = row[dateIdx];
 
@@ -1729,7 +1802,7 @@ function syncVentesFromOrders() {
             total_eur: totalEur,
             date: date || new Date(),
           },
-          "" // Pas d'URL de facture pour les anciennes commandes
+          "", // Pas d'URL de facture pour les anciennes commandes
         );
 
         if (success) {
@@ -1740,7 +1813,7 @@ function syncVentesFromOrders() {
         }
       } catch (err) {
         Logger.log(
-          "Erreur création VENTES pour " + orderId + ": " + err.message
+          "Erreur création VENTES pour " + orderId + ": " + err.message,
         );
         errorCount++;
       }
